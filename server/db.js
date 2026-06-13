@@ -8,7 +8,8 @@ const pool = new Pool({
   // Direct connection (for migrations) — port 5432
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
+  statement_timeout: 10000,
 });
 
 pool.on('error', (err) => {

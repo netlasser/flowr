@@ -1,6 +1,7 @@
 import React from 'react';
 import { useFlowrStore } from '../../store';
-import { ArrowsLeftRight, Clock, Medal, ChartLineUp, ShieldCheck, Eye, WarningCircle, Shield, BatteryCharging } from '@phosphor-icons/react';
+import { ArrowsLeftRight, Clock, Medal, ShieldCheck, Eye, WarningCircle, Shield, BatteryCharging, TrendUp, Heartbeat, Trophy } from '@phosphor-icons/react';
+import * as Sentry from "@sentry/react";
 
 // Possible badges list with descriptions and lock indicators
 const ALL_POSSIBLE_BADGES = [
@@ -67,14 +68,12 @@ export const WhiplashAnalytics: React.FC = () => {
         count: tasks.filter((t) => t.zoneId === zone.id).length,
         color: `bg-${zone.color}-500`,
       }));
-  const maxCount = Math.max(...zoneDistribution.map(z => z.count), 1);
-
   return (
     <div className="flex-1 flex flex-col gap-6 overflow-hidden">
       {/* Header Info */}
       <div className="border-b border-border pb-5">
         <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-1">
-          <TrendUp size={13} className="text-brand-500" />
+          <TrendUp size={13} className="text-primary" />
           <span>Whiplash Statistics</span>
         </div>
         <h1 className="text-2xl lg:text-3xl font-display font-extrabold text-foreground tracking-tight m-0">
@@ -94,7 +93,7 @@ export const WhiplashAnalytics: React.FC = () => {
           <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Context Switches Today</p>
           <h3 className="text-4xl font-display text-foreground">{totalSwitches}</h3>
           <p className="text-xs text-muted-foreground mt-2">
-            Target: <span className="text-brand-400 font-bold">&lt; 3 switches</span> per day.
+            Target: <span className="text-primary font-bold">&lt; 3 switches</span> per day.
           </p>
         </div>
 
@@ -126,7 +125,7 @@ export const WhiplashAnalytics: React.FC = () => {
         <div className="lg:col-span-5 bg-muted/40 backdrop-blur-sm border border-border rounded-2xl p-6 flex flex-col h-full justify-between">
           <div>
             <h3 className="text-sm font-display font-bold text-foreground mb-2 flex items-center gap-2">
-              <TrendUp size={15} className="text-brand-500" />
+              <TrendUp size={15} className="text-primary" />
               <span>Context Batch Density</span>
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-6">
@@ -136,7 +135,6 @@ export const WhiplashAnalytics: React.FC = () => {
             {/* Custom SVG/CSS Bar Chart */}
             <div className="bg-muted/40 backdrop-blur-sm border border-border rounded-xl p-4">
               {zoneDistribution.map((zone) => {
-                const percent = (zone.count / maxCount) * 100;
                 return (
                   <div key={zone.label} className="flex justify-between py-2 border-b border-border/50 last:border-0">
                     <span className="font-body text-foreground">{zone.label}</span>
@@ -148,7 +146,7 @@ export const WhiplashAnalytics: React.FC = () => {
           </div>
 
           <div className="mt-8 bg-muted/40 backdrop-blur-sm border border-border p-4 rounded-xl flex items-start gap-3">
-            <Heartbeat size={16} className="text-brand-500 mt-0.5 flex-shrink-0" />
+            <Heartbeat size={16} className="text-primary mt-0.5 flex-shrink-0" />
             <div>
               <h4 className="text-[11px] font-bold text-foreground">Focus Health Recommendation</h4>
               <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
@@ -163,7 +161,7 @@ export const WhiplashAnalytics: React.FC = () => {
         {/* Right Column: Gamified Badges */}
         <div className="lg:col-span-7 bg-muted/40 backdrop-blur-sm border border-border rounded-2xl p-6">
           <h3 className="text-sm font-display font-bold text-foreground mb-2 flex items-center gap-2">
-            <Trophy size={15} className="text-brand-500" />
+            <Trophy size={15} className="text-primary" />
             <span>Gamified Focus Badges</span>
           </h3>
           <p className="text-xs text-muted-foreground leading-relaxed mb-6">
@@ -189,7 +187,7 @@ export const WhiplashAnalytics: React.FC = () => {
                     <h4 className={`font-display text-foreground text-lg ${unlocked ? '' : 'opacity-60'}`}>
                       {badgeOpt.name}
                     </h4>
-                    {unlocked && <ShieldCheck size={14} className="text-brand-400 ml-auto" />}
+                    {unlocked && <ShieldCheck size={14} className="text-primary ml-auto" />}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {badgeOpt.description}
@@ -197,13 +195,32 @@ export const WhiplashAnalytics: React.FC = () => {
                   <p className="text-xs text-muted-foreground mt-2">
                     Goal: {badgeOpt.criteria}
                     {unlocked && storeBadge && (
-                      <span className="ml-2 text-brand-400 font-bold">Unlocked</span>
+                      <span className="ml-2 text-primary font-bold">Unlocked</span>
                     )}
                   </p>
                 </div>
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* Sentry Verification — temporary test buttons */}
+      <div className="border border-dashed border-border rounded-xl p-4">
+        <p className="text-xs text-muted-foreground mb-2 font-semibold uppercase tracking-wider">Sentry Diagnostics</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => { throw new Error("Sentry React test error from FLOWR analytics"); }}
+            className="text-xs bg-red-900/30 border border-red-800/40 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-900/50 transition-colors"
+          >
+            Throw Test Error
+          </button>
+          <button
+            onClick={() => Sentry.captureMessage("Sentry test message from FLOWR analytics", "info")}
+            className="text-xs bg-primary/20 border border-primary/40 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/30 transition-colors"
+          >
+            Capture Test Message
+          </button>
         </div>
       </div>
     </div>

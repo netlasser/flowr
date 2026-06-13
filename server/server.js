@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -14,6 +16,12 @@ import analyticsRouter from './routes/analytics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV || 'development',
+  tracesSampleRate: 1.0,
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +54,9 @@ app.use(express.static(frontendDistPath));
 app.get('/{*path}', (req, res) => {
   res.sendFile(path.resolve(frontendDistPath, 'index.html'));
 });
+
+// Sentry error handler (must come before the generic handler)
+Sentry.setupExpressErrorHandler(app);
 
 // Global Error Catch Handler
 app.use((err, req, res, next) => {

@@ -8,14 +8,12 @@
   --color-border: #2e2e2e;
   --color-primary: #FFB000;
   --color-primary-foreground: #0a0a0a;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
+  --color-brand-400: #FFB000;
+  --color-brand-500: #e6a000;
   --color-whiplash-500: #ef4444;
   --color-whiplash-600: #dc2626;
-  --color-buffer-500: #f59e0b;
-  --color-buffer-600: #d97706;
-  --color-dark-900: #0f172a;
-  --color-dark-950: #020617;
+  --color-buffer-500: #FFB000;
+  --color-buffer-600: #e6a000;
   --font-display: 'Instrument Serif', serif;
   --font-body: 'Inter', sans-serif;
   --animate-fade-in: fade-in 0.2s ease-out;

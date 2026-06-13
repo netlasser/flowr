@@ -146,7 +146,7 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
               placeholder="e.g. Deep Research, Design Sprint…"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-muted/60 border border-border focus:border-brand rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none transition-colors"
+              className="bg-muted/60 border border-border focus:border-primary/50 rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none transition-colors"
             />
           </div>
 
@@ -161,7 +161,7 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
               placeholder="What type of cognitive work belongs here?"
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              className="bg-muted/60 border border-border focus:border-brand rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none resize-none transition-colors leading-relaxed"
+              className="bg-muted/60 border border-border focus:border-primary/50 rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none resize-none transition-colors leading-relaxed"
             />
           </div>
 
@@ -180,7 +180,7 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
                   className="relative h-8 rounded-lg transition-all duration-150 active:scale-90"
                   style={{
                     background: c.hex,
-                    boxShadow: color === c.value ? `0 0 0 2px #0f172a, 0 0 0 4px ${c.hex}` : 'none',
+                    boxShadow: color === c.value ? `0 0 0 2px #0a0a0a, 0 0 0 4px ${c.hex}` : 'none',
                     transform: color === c.value ? 'scale(1.12)' : 'scale(1)',
                   }}
                 >
@@ -217,9 +217,9 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
                           color: selectedColor.hex,
                         }
                       : {
-                          background: 'rgba(15,23,42,0.6)',
-                          border: '1px solid rgba(51,65,85,0.6)',
-                          color: '#64748b',
+                          background: 'rgba(26, 26, 26, 0.6)',
+                          border: '1px solid rgba(46, 46, 46, 0.6)',
+                          color: '#a8a8ae',
                         }
                   }
                 >
@@ -241,7 +241,7 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
             <button
               type="submit"
               disabled={!name.trim() || isSubmitting}
-              className="flex items-center gap-1.5 px-5 py-2 text-xs font-extrabold rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 liquid-glass bg-brand text-foreground"
+              className="flex items-center gap-1.5 px-5 py-2 text-xs font-extrabold rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 shadow-lg"
             >
               <Plus size={14} />
               <span>{isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Zone'}</span>

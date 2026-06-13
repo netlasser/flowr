@@ -1,15 +1,28 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
-// https://vite.dev/config/
+const plugins = [react()];
+
+if (process.env.SENTRY_AUTH_TOKEN) {
+  plugins.push(
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+    }),
+  );
+}
+
 export default defineConfig({
-  plugins: [react()],
+  build: { sourcemap: "hidden" },
+  plugins,
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
+      "/api": {
+        target: "http://localhost:5000",
         changeOrigin: true,
       },
     },
   },
-})
+});

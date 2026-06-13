@@ -5,18 +5,34 @@ import { findById, create } from '../models/user.js';
 const router = express.Router();
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:54321';
-const projectId = SUPABASE_URL.replace(/https?:\/\//, '').split('.')[0];
 const JWKS = createRemoteJWKSet(
   new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
 );
 
-// Legacy guest session (for prototyping)
+function staticGuest() {
+  return {
+    id: 'guest-user',
+    email: 'flowr-focus@deepmind.com',
+    name: 'Focus Builder',
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function queryWithTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('DB query timed out')), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Legacy guest session (for prototyping) — DB-independent fallback
 router.post('/guest', async (req, res) => {
   try {
-    let guest = await findById('guest-user');
+    let guest = await queryWithTimeout(findById('guest-user'), 3000);
     if (!guest) {
-      await create('guest-user', 'flowr-focus@deepmind.com', 'Focus Builder', '');
-      guest = await findById('guest-user');
+      await queryWithTimeout(create('guest-user', 'flowr-focus@deepmind.com', 'Focus Builder', ''), 3000);
+      guest = await queryWithTimeout(findById('guest-user'), 3000);
     }
     res.json({
       user: {
@@ -28,8 +44,11 @@ router.post('/guest', async (req, res) => {
       token: 'guest-token',
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server guest session error' });
+    console.warn('Guest session DB unavailable, returning static user:', err.message);
+    res.json({
+      user: staticGuest(),
+      token: 'guest-token',
+    });
   }
 });
 
@@ -49,11 +68,10 @@ router.post('/supabase', async (req, res) => {
     const email = payload.email || '';
     const name = payload.user_metadata?.name || email?.split('@')[0] || 'User';
 
-    // Upsert: create user if first time, otherwise fetch existing
-    let user = await findById(supabaseUserId);
+    let user = await queryWithTimeout(findById(supabaseUserId), 5000);
     if (!user) {
-      await create(supabaseUserId, email, name, '');
-      user = await findById(supabaseUserId);
+      await queryWithTimeout(create(supabaseUserId, email, name, ''), 5000);
+      user = await queryWithTimeout(findById(supabaseUserId), 5000);
     }
 
     res.json({

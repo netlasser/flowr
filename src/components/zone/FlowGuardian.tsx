@@ -81,26 +81,15 @@ export const FlowGuardian: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-dark-950 flex flex-col font-sans select-none animate-fade-in text-foreground">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col font-sans select-none animate-fade-in text-foreground">
       
-      {/* Subtle Background Glow corresponding to color themes */}
-      <div className="absolute inset-0 bg-radial-gradient pointer-events-none opacity-20">
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full filter blur-[120px] transition-colors duration-500 ${
-          activeZone.color === 'emerald'
-            ? 'bg-emerald-500/20'
-            : activeZone.color === 'blue'
-            ? 'bg-blue-500/20'
-            : 'bg-purple-500/20'
-        }`} />
-      </div>
-
       {/* Top Banner Status */}
-      <div className="relative border-b border-border bg-dark-950/80 px-6 py-4 flex items-center justify-between">
+      <div className="relative border-b border-border bg-background/80 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`flex h-2 w-2 rounded-full ${
-            isTimerRunning ? 'bg-brand-500 animate-pulse' : 'bg-muted-foreground/50'
+            isTimerRunning ? 'bg-primary animate-pulse' : 'bg-muted-foreground/50'
           }`} />
-          <div className="flex items-center gap-1.5 text-xs text-brand-400 font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 text-xs text-primary font-bold uppercase tracking-wider">
             <Shield size={13} />
             <span>Flow Guardian Active</span>
           </div>
@@ -112,7 +101,7 @@ export const FlowGuardian: React.FC = () => {
             onClick={() => handleModeSwitch('count-up')}
             className={`px-3 py-1 text-[10px] font-bold rounded transition-colors ${
               timerMode === 'count-up'
-                ? 'bg-muted/80 text-brand-400 border border-border'
+                ? 'bg-muted/80 text-primary border border-border'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -122,7 +111,7 @@ export const FlowGuardian: React.FC = () => {
             onClick={() => handleModeSwitch('pomodoro')}
             className={`px-3 py-1 text-[10px] font-bold rounded transition-colors ${
               timerMode === 'pomodoro'
-                ? 'bg-muted/80 text-brand-400 border border-border'
+                ? 'bg-muted/80 text-primary border border-border'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -178,7 +167,7 @@ export const FlowGuardian: React.FC = () => {
           {/* Active objectives panel */}
           <div className="bg-muted/40 backdrop-blur-sm border border-border rounded-xl p-4 mt-6 space-y-2">
             <div className="flex items-center gap-2 border-b border-border pb-4 mb-4">
-              <CheckCircle size={16} className="text-brand-500" />
+              <CheckCircle size={16} className="text-primary" />
               <h3 className="text-sm font-display font-bold text-foreground">Batched Focus Objectives</h3>
               <span className="ml-auto bg-muted/60 border border-border text-[10px] px-2 py-0.5 rounded text-muted-foreground tabular-nums">
                 {zoneTasks.length} left
@@ -210,7 +199,7 @@ export const FlowGuardian: React.FC = () => {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <CheckCircle size={32} className="text-brand-500 animate-pulse mb-3" />
+                  <CheckCircle size={32} className="text-primary animate-pulse mb-3" />
                   <h4 className="text-xs font-bold text-muted-foreground">All Focus Objectives Cleared!</h4>
                   <p className="text-[10px] text-muted-foreground mt-1 max-w-[220px]">
                     You have successfully completed every batched objective in this zone. Take a well-earned buffer break!
@@ -232,7 +221,7 @@ export const FlowGuardian: React.FC = () => {
                     key={task.id}
                     className="flex items-center gap-2 bg-muted/20 border border-border rounded-xl p-3 opacity-50"
                   >
-                    <CheckCircle size={14} className="text-brand-500" />
+                    <CheckCircle size={14} className="text-primary" />
                     <span className="text-xs line-through text-muted-foreground truncate">
                       {task.title}
                     </span>
@@ -247,7 +236,7 @@ export const FlowGuardian: React.FC = () => {
       {/* Exit Button - Bottom Right Escape Hatch */}
       <button
         onClick={() => setShowExitWarning(true)}
-        className="liquid-glass rounded-full px-6 py-3 text-sm fixed bottom-6 right-6 flex items-center gap-2 hover:scale-105 transition"
+        className="border border-border bg-muted/70 text-foreground rounded-full px-6 py-3 text-sm fixed bottom-6 right-6 flex items-center gap-2 hover:bg-muted hover:text-primary hover:scale-105 active:scale-95 transition-all"
       >
         <SignOut className="w-4 h-4" />
         <span>Exit Focus Zone</span>
@@ -255,7 +244,7 @@ export const FlowGuardian: React.FC = () => {
 
       {/* Whiplash Warning Modal Overlay */}
       {showExitWarning && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
           <div className="bg-muted/80 border border-whiplash-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slide-up">
             <div className="flex items-center gap-3 text-whiplash-500 mb-3">
               <Warning size={24} />

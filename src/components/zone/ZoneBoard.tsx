@@ -11,7 +11,7 @@ import { useFlowrStore } from '../../store';
 import { ZoneColumn } from './ZoneColumn';
 import { TaskItem } from '../task/TaskItem';
 import { CreateZoneModal } from './CreateZoneModal';
-import { PlusCircle, SquaresFour, Stack, WarningCircle, ArrowRight } from '@phosphor-icons/react';
+import { PlusCircle, Plus, SquaresFour, Stack, WarningCircle, ArrowRight } from '@phosphor-icons/react';
 import type { Task } from '../../types';
 
 /* ─── Keyword map for default zones ─────────────────── */
@@ -194,8 +194,8 @@ export const ZoneBoard: React.FC = () => {
             <p className="text-xs text-muted-foreground mt-2">e.g. "Respond to slack", "Refactor auth module", "Draft Q3 report"</p>
             {suggestedZoneId && (
               <span className="absolute right-3 top-2.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
               </span>
             )}
           </div>
@@ -204,7 +204,7 @@ export const ZoneBoard: React.FC = () => {
             <button
               id="smart-batch-apply-btn"
               onClick={handleApplySmartBatch}
-              className="liquid-glass text-foreground text-xs font-medium px-4 py-2.5 rounded-full transition-all duration-300 flex items-center gap-1 active:scale-95 whitespace-nowrap"
+              className="bg-primary text-primary-foreground text-xs font-medium px-4 py-2.5 rounded-full transition-all duration-300 flex items-center gap-1 hover:bg-primary/90 hover:scale-105 active:scale-95 whitespace-nowrap shadow-lg"
             >
               <span>Batch → {suggestedZone?.name ?? 'Zone'}</span>
               <ArrowRight size={13} />
@@ -212,7 +212,7 @@ export const ZoneBoard: React.FC = () => {
           ) : (
             <button
               onClick={() => { if (smartInput.trim()) handleSmartInputChange(smartInput); }}
-              className="liquid-glass text-foreground text-xs font-medium px-4 py-2.5 rounded-full transition-all duration-300 flex items-center gap-1 active:scale-95 whitespace-nowrap"
+              className="border border-border bg-muted/70 text-foreground text-xs font-medium px-4 py-2.5 rounded-full transition-all duration-300 flex items-center gap-1 hover:bg-muted hover:text-primary hover:scale-105 active:scale-95 whitespace-nowrap"
             >
               <Stack className="w-4 h-4" />
               <span>Suggest Tasks</span>

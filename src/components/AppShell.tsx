@@ -83,9 +83,9 @@ export function AppShell() {
 
   if (!hasHydratedFromBackend) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-dark-950 text-foreground">
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-4">
-          <div className="rounded-2xl border border-brand-500/20 bg-brand-500/10 p-4 text-brand-500">
+          <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-primary">
             <Cpu size={28} />
           </div>
           <div className="text-center">
@@ -170,7 +170,7 @@ export function AppShell() {
 
           <button
             onClick={() => { logout(); navigate('/'); }}
-            className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors active:scale-95"
             title="End session"
           >
             <SignOut size={13} />

@@ -174,7 +174,7 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
 
           <button
             onClick={() => startFocus(zone.id, 'count-up')}
-            className="liquid-glass rounded-full px-4 py-1 text-xs flex items-center gap-1 hover:scale-105 hover:text-primary transition"
+            className="border border-border bg-muted/70 text-foreground rounded-full px-4 py-1 text-xs flex items-center gap-1 hover:bg-muted hover:text-primary hover:scale-105 active:scale-95 transition-all"
             title={`Enter Focus Guardian for ${zone.name}`}
           >
             <Crosshair weight="bold" className="w-4 h-4" />
@@ -242,14 +242,14 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
               placeholder="Task title…"
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="bg-muted/50 border border-border focus:border-brand rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/70 focus:outline-none transition-colors"
+              className="bg-muted/50 border border-border focus:border-primary/50 rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/70 focus:outline-none transition-colors"
             />
             <textarea
               placeholder="Description (optional)"
               value={newTaskDesc}
               onChange={(e) => setNewTaskDesc(e.target.value)}
               rows={2}
-              className="bg-muted/50 border border-border focus:border-brand rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/70 focus:outline-none resize-none transition-colors"
+              className="bg-muted/50 border border-border focus:border-primary/50 rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/70 focus:outline-none resize-none transition-colors"
             />
             <div className="flex items-center justify-end gap-2 text-xs">
               <button
@@ -261,7 +261,7 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
               </button>
               <button
                 type="submit"
-                className="liquid-glass font-medium px-3 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95 flex items-center gap-1 text-foreground"
+                className="bg-primary text-primary-foreground font-medium px-3 py-1.5 rounded-full transition-all hover:bg-primary/90 hover:scale-105 active:scale-95 flex items-center gap-1 shadow-lg"
               >
                 <Plus size={13} />
                 <span>Add task</span>

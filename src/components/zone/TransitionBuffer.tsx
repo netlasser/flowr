@@ -1,6 +1,6 @@
 import { useEffect, useState, createElement } from 'react';
 import { useFlowrStore } from '../../store';
-import { Wind, SkipForward, Warning, BatteryCharging, PersonSimpleWalk, Drop, Smiley, Eye, Tree } from '@phosphor-icons/react';
+import { Wind, SkipForward, Warning, BatteryCharging, PersonSimpleWalk, Drop, Smiley, Eye, Tree, Coffee } from '@phosphor-icons/react';
 
 const microPrompts: { icon: import('react').ElementType; text: string }[] = [
   { icon: PersonSimpleWalk, text: 'Stand up, stretch, and walk around for a moment.' },
@@ -144,7 +144,7 @@ export const TransitionBuffer: React.FC = () => {
 
       {/* Skip Warning Modal Overlay */}
       {showSkipWarning && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
           <div className="bg-muted/80 border border-buffer-500/30 rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-slide-up text-left">
             <div className="flex items-center gap-3 text-buffer-500 mb-3">
               <Warning size={24} />
@@ -177,7 +177,7 @@ export const TransitionBuffer: React.FC = () => {
               </button>
               <button
                 onClick={handleConfirmSkip}
-                className="px-4 py-2 rounded-xl bg-buffer-500 hover:bg-buffer-600 text-dark-950 transition-colors"
+                className="px-4 py-2 rounded-xl bg-buffer-500 hover:bg-buffer-600 text-primary-foreground transition-colors"
               >
                 Skip Buffer Break
               </button>

@@ -21,7 +21,7 @@ export function TaskItem({ task }: { task: Task }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`group bg-background/50 border border-border rounded-lg p-3 hover:bg-muted/60 transition-all cursor-pointer ${isDragging ? 'opacity-50 shadow-lg ring-2 ring-brand-500/30' : ''}`}
+      className={`group bg-background/50 border border-border rounded-lg p-3 hover:bg-muted/60 transition-all cursor-pointer ${isDragging ? 'opacity-50 shadow-lg ring-2 ring-primary/30' : ''}`}
     >
       <div className="flex items-start gap-2">
         <button

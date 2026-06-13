@@ -28,3 +28,11 @@ server/*.db
 server/*.db-journal
 server/*.db-shm
 server/*.db-wal
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Compiled binaries
+flowr

@@ -16,7 +16,7 @@ export default function LandingPage() {
         <nav className="flex justify-between items-center px-8 py-6 max-w-7xl mx-auto w-full">
           <span className="text-3xl tracking-tight font-display text-foreground">FLOWR</span>
           <Link to="/app">
-            <button className="bg-primary text-primary-foreground rounded-full px-6 py-2.5 font-medium hover:bg-primary/90 hover:scale-105 transition-all shadow-lg">
+            <button className="bg-primary text-primary-foreground rounded-full px-6 py-2.5 font-medium hover:bg-primary/90 hover:scale-105 transition-all shadow-lg active:scale-[0.98]">
               Begin Journey
             </button>
           </Link>
@@ -32,7 +32,7 @@ export default function LandingPage() {
             Amid the chaos, we build digital spaces for sharp focus and inspired work.
           </p>
           <Link to="/app">
-            <button className="animate-fade-rise-delay-2 bg-primary text-primary-foreground rounded-full px-14 py-5 text-base mt-12 font-medium hover:bg-primary/90 hover:scale-105 transition-all shadow-lg shadow-[0_0_15px_rgba(255,176,0,0.3)]">
+            <button className="animate-fade-rise-delay-2 bg-primary text-primary-foreground rounded-full px-14 py-5 text-base mt-12 font-medium hover:bg-primary/90 hover:scale-105 transition-all shadow-lg shadow-[0_0_15px_rgba(255,176,0,0.3)] active:scale-[0.98]">
               Begin Journey
             </button>
           </Link>
