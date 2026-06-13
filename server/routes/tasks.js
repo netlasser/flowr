@@ -1,12 +1,12 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { getAll, create, toggle, move, remove } from '../models/task.js';
+import { getAll, findById, create, toggle, move, remove } from '../models/task.js';
 
 const router = express.Router();
 
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const tasks = getAll(req.user.id);
+    const tasks = await getAll(req.user.id);
     res.json(tasks);
   } catch (err) {
     console.error(err);
@@ -14,7 +14,7 @@ router.get('/', authenticateToken, (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   const { title, description, zoneId } = req.body;
 
   if (!title || !zoneId) {
@@ -22,8 +22,8 @@ router.post('/', authenticateToken, (req, res) => {
   }
 
   try {
-    const taskId = `t-${Date.now()}`;
-    const newTask = create(taskId, title, description, zoneId, req.user.id);
+    const taskId = req.body.id || `t-${Date.now()}`;
+    const newTask = await create(taskId, title, description, zoneId, req.user.id);
     res.status(201).json(newTask);
   } catch (err) {
     console.error(err);
@@ -31,9 +31,22 @@ router.post('/', authenticateToken, (req, res) => {
   }
 });
 
-router.patch('/:id/toggle', authenticateToken, (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const updated = toggle(req.params.id, req.user.id);
+    const task = await findById(req.params.id, req.user.id);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch task' });
+  }
+});
+
+router.patch('/:id/toggle', authenticateToken, async (req, res) => {
+  try {
+    const updated = await toggle(req.params.id, req.user.id);
     if (!updated) {
       return res.status(404).json({ error: 'Task not found' });
     }
@@ -44,7 +57,7 @@ router.patch('/:id/toggle', authenticateToken, (req, res) => {
   }
 });
 
-router.patch('/:id/move', authenticateToken, (req, res) => {
+router.patch('/:id/move', authenticateToken, async (req, res) => {
   const { zoneId } = req.body;
 
   if (!zoneId) {
@@ -52,7 +65,7 @@ router.patch('/:id/move', authenticateToken, (req, res) => {
   }
 
   try {
-    const updated = move(req.params.id, zoneId, req.user.id);
+    const updated = await move(req.params.id, zoneId, req.user.id);
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -60,9 +73,9 @@ router.patch('/:id/move', authenticateToken, (req, res) => {
   }
 });
 
-router.delete('/:id', authenticateToken, (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    remove(req.params.id, req.user.id);
+    await remove(req.params.id, req.user.id);
     res.json({ success: true, id: req.params.id });
   } catch (err) {
     console.error(err);

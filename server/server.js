@@ -9,6 +9,8 @@ import zonesRouter from './routes/zones.js';
 import tasksRouter from './routes/tasks.js';
 import switchesRouter from './routes/switches.js';
 import badgesRouter from './routes/badges.js';
+import sessionsRouter from './routes/sessions.js';
+import analyticsRouter from './routes/analytics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +30,8 @@ app.use('/api/zones', zonesRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/switches', switchesRouter);
 app.use('/api/badges', badgesRouter);
+app.use('/api/sessions', sessionsRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // Simple Health Status Check
 app.get('/api/health', (req, res) => {
@@ -38,8 +42,8 @@ app.get('/api/health', (req, res) => {
 const frontendDistPath = path.resolve(__dirname, '../dist');
 app.use(express.static(frontendDistPath));
 
-// Fallback index.html router for SPA React-Router
-app.get('*', (req, res) => {
+// Fallback index.html router for SPA React-Router (Express 5 compatible)
+app.get('/{*path}', (req, res) => {
   res.sendFile(path.resolve(frontendDistPath, 'index.html'));
 });
 
@@ -52,6 +56,6 @@ app.use((err, req, res, next) => {
 // Start Server
 app.listen(PORT, () => {
   console.log(`===============================================`);
-  console.log(`🚀 FLOWR Backend running at: http://localhost:${PORT}`);
+  console.log(`    FLOWR Backend running at: http://localhost:${PORT}`);
   console.log(`===============================================`);
 });

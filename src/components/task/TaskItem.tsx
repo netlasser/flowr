@@ -1,113 +1,64 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { DotsSixVertical, CheckCircle, PencilSimple, Trash } from '@phosphor-icons/react';
+import { useFlowrStore } from '../../store/index';
 import type { Task } from '../../types';
-import { useFlowrStore } from '../../store';
-import { CheckSquare, Square, Trash2, Calendar, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 
-interface TaskItemProps {
-  task: Task;
-}
-
-export const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
-  const toggleTask = useFlowrStore((state) => state.toggleTask);
-  const deleteTask = useFlowrStore((state) => state.deleteTask);
+export function TaskItem({ task }: { task: Task }) {
   const [showDetails, setShowDetails] = useState(false);
+  const toggleComplete = useFlowrStore((state) => state.toggleComplete);
+  const deleteTask = useFlowrStore((state) => state.deleteTask);
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 50 : 1,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative flex flex-col rounded-xl border p-4 transition-all duration-200 ${
-        task.completed
-          ? 'bg-slate-900/40 border-slate-800 text-slate-500'
-          : 'bg-slate-900/90 border-slate-800 hover:border-slate-700 text-slate-100 shadow-sm'
-      }`}
+      className={`group bg-background/50 border border-border rounded-lg p-3 hover:bg-muted/60 transition-all cursor-pointer ${isDragging ? 'opacity-50 shadow-lg ring-2 ring-brand-500/30' : ''}`}
     >
-      <div className="flex items-start gap-3">
-        {/* Grab Handle */}
+      <div className="flex items-start gap-2">
         <button
           {...attributes}
           {...listeners}
-          className="mt-1 cursor-grab text-slate-600 hover:text-slate-400 group-hover:opacity-100 opacity-40 transition-opacity"
-          title="Drag to reorder or switch zones"
+          className="mt-1 flex-shrink-0 cursor-grab text-muted-foreground/40 hover:text-primary transition-colors active:cursor-grabbing"
+          aria-label="Drag to reorder"
+          tabIndex={-1}
         >
-          <GripVertical size={16} />
+          <DotsSixVertical size={14} />
         </button>
-
-        {/* Complete Checkbox */}
-        <button
-          onClick={() => toggleTask(task.id)}
-          className={`mt-0.5 text-slate-400 hover:text-brand-500 transition-colors flex-shrink-0`}
-        >
-          {task.completed ? (
-            <CheckSquare size={19} className="text-brand-500" />
-          ) : (
-            <Square size={19} />
-          )}
-        </button>
-
-        {/* Title and Detail Toggle */}
-        <div className="flex-1 min-w-0" onClick={() => task.description && setShowDetails(!showDetails)}>
-          <h4
-            className={`text-sm font-medium leading-relaxed truncate cursor-pointer select-none ${
-              task.completed ? 'line-through text-slate-500' : 'text-slate-200 hover:text-brand-500'
-            }`}
-          >
-            {task.title}
-          </h4>
-          
-          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
-            <Calendar size={11} />
-            <span>{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}</span>
-            {task.description && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDetails(!showDetails);
-                }}
-                className="ml-1 flex items-center gap-0.5 text-slate-400 hover:text-brand-500 font-medium"
-              >
-                {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                <span>details</span>
-              </button>
-            )}
-          </div>
+        <div className="mt-0.5 flex-shrink-0 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleComplete(task.id); }}>
+          <CheckCircle
+            weight={task.completed ? 'fill' : 'regular'}
+            className={`w-4 h-4 ${task.completed ? 'text-primary' : 'text-muted-foreground'}`}
+          />
         </div>
-
-        {/* Delete button */}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
+          <p className={`text-sm ${task.completed ? 'line-through text-muted-foreground/70' : 'text-foreground'}`}>{task.title}</p>
+          {showDetails && task.description && (
+            <div className="mt-2 text-xs text-muted-foreground border-t border-border pt-2">{task.description}</div>
+          )}
+        </div>
         <button
-          onClick={() => deleteTask(task.id)}
-          className="text-slate-600 hover:text-whiplash-500 opacity-0 group-hover:opacity-100 transition-all duration-200"
-          title="Delete task"
+          className="flex-shrink-0 p-1 rounded-md text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground transition-all"
+          aria-label="Edit task"
         >
-          <Trash2 size={15} />
+          <PencilSimple className="w-4 h-4" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this task?')) deleteTask(task.id); }}
+          className="flex-shrink-0 p-1 rounded-md text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-whiplash-500 hover:bg-whiplash-500/10 transition-all"
+          aria-label="Delete task"
+        >
+          <Trash className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Description Expandable Panel */}
-      {showDetails && task.description && (
-        <div className="mt-3 pl-8 text-xs text-slate-400 border-t border-slate-800/80 pt-2 animate-fade-in leading-relaxed">
-          {task.description}
-        </div>
-      )}
     </div>
   );
-};
+}

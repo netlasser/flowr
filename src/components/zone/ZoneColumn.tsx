@@ -3,30 +3,123 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core';
 import type { ContextZone, Task } from '../../types';
 import { TaskItem } from '../task/TaskItem';
+import { CreateZoneModal } from './CreateZoneModal';
 import { useFlowrStore } from '../../store';
-import { Plus, Play, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
+import {
+  Plus, Crosshair, CaretDown, CaretRight,
+  Code, Envelope, Calendar, PencilSimple, Gear, Briefcase,
+  BookOpen, Lightbulb, Headphones, Palette, Users, ChartBar,
+  Coffee, Globe, Lightning, Target, Stack, Tray, Trash,
+} from '@phosphor-icons/react';
 
+/* ── Icon resolver ─────────────────────────────────────────────────── */
+const ICON_MAP: Record<string, React.ElementType> = {
+  Code,
+  Mail: Envelope,
+  Calendar,
+  PenLine: PencilSimple,
+  Settings: Gear,
+  Briefcase,
+  BookOpen,
+  Lightbulb,
+  Headphones,
+  Palette,
+  Users,
+  BarChart2: ChartBar,
+  Coffee,
+  Globe,
+  Zap: Lightning,
+  Target,
+  Layers: Stack,
+  MessageSquare: Envelope, // legacy alias
+};
+
+function ZoneIcon({ name, size = 16 }: { name?: string; size?: number }) {
+  const Ic = name ? (ICON_MAP[name] ?? Stack) : Tray;
+  return <Ic size={size} />;
+}
+
+/* ── Color tokens ──────────────────────────────────────────────────── */
+type ColorSet = {
+  headerIcon: string;
+  accentBorder: string;
+  focusGlow: string;
+  btn: string;
+  badge: string;
+};
+
+const COLOR_MAP: Record<string, ColorSet> = {
+  emerald: {
+    headerIcon:   'text-emerald-400',
+    accentBorder: 'border-t-emerald-500',
+    focusGlow:    'hover:shadow-[0_0_20px_-3px_rgba(16,185,129,0.3)]',
+    btn:          'bg-emerald-500 hover:bg-emerald-600 shadow-[0_4px_12px_rgba(16,185,129,0.25)]',
+    badge:        'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  },
+  blue: {
+    headerIcon:   'text-blue-400',
+    accentBorder: 'border-t-blue-500',
+    focusGlow:    'hover:shadow-[0_0_20px_-3px_rgba(59,130,246,0.3)]',
+    btn:          'bg-blue-500 hover:bg-blue-600 shadow-[0_4px_12px_rgba(59,130,246,0.25)]',
+    badge:        'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  },
+  purple: {
+    headerIcon:   'text-purple-400',
+    accentBorder: 'border-t-purple-500',
+    focusGlow:    'hover:shadow-[0_0_20px_-3px_rgba(168,85,247,0.3)]',
+    btn:          'bg-purple-500 hover:bg-purple-600 shadow-[0_4px_12px_rgba(168,85,247,0.25)]',
+    badge:        'bg-purple-500/20 text-purple-300 border-purple-500/30',
+  },
+  rose: {
+    headerIcon:   'text-rose-400',
+    accentBorder: 'border-t-rose-500',
+    focusGlow:    'hover:shadow-[0_0_20px_-3px_rgba(244,63,94,0.3)]',
+    btn:          'bg-rose-500 hover:bg-rose-600 shadow-[0_4px_12px_rgba(244,63,94,0.25)]',
+    badge:        'bg-rose-500/20 text-rose-300 border-rose-500/30',
+  },
+  amber: {
+    headerIcon:   'text-amber-400',
+    accentBorder: 'border-t-amber-500',
+    focusGlow:    'hover:shadow-[0_0_20px_-3px_rgba(245,158,11,0.3)]',
+    btn:          'bg-amber-500 hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.25)]',
+    badge:        'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  },
+  cyan: {
+    headerIcon:   'text-cyan-400',
+    accentBorder: 'border-t-cyan-500',
+    focusGlow:    'hover:shadow-[0_0_20px_-3px_rgba(6,182,212,0.3)]',
+    btn:          'bg-cyan-500 hover:bg-cyan-600 shadow-[0_4px_12px_rgba(6,182,212,0.25)]',
+    badge:        'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  },
+};
+
+function getColors(color: string): ColorSet {
+  return COLOR_MAP[color] ?? COLOR_MAP.purple;
+}
+
+/* ── Component ─────────────────────────────────────────────────────── */
 interface ZoneColumnProps {
   zone: ContextZone;
   tasks: Task[];
 }
 
 export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
-  const addTask = useFlowrStore((state) => state.addTask);
-  const startFocus = useFlowrStore((state) => state.startFocus);
-  
+  const addTask    = useFlowrStore((s) => s.addTask);
+  const startFocus = useFlowrStore((s) => s.startFocus);
+
   const [showAddTaskForm, setShowAddTaskForm] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDesc, setNewTaskDesc] = useState('');
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [newTaskTitle,    setNewTaskTitle]    = useState('');
+  const [newTaskDesc,     setNewTaskDesc]     = useState('');
+  const [showCompleted,   setShowCompleted]   = useState(false);
+  const [showEditModal,   setShowEditModal]   = useState(false);
 
-  // Droppable area hook for dnd-kit
-  const { setNodeRef, isOver } = useDroppable({
-    id: zone.id,
-  });
+  const deleteZone = useFlowrStore((s) => s.deleteZone);
 
-  const activeTasks = tasks.filter((t) => !t.completed);
+  const { setNodeRef, isOver } = useDroppable({ id: zone.id });
+
+  const activeTasks    = tasks.filter((t) => !t.completed);
   const completedTasks = tasks.filter((t) => t.completed);
+  const c              = getColors(zone.color);
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,110 +130,95 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
     setShowAddTaskForm(false);
   };
 
-  // Sleek Tailwind border classes corresponding to custom color selection
-  const getColorClasses = (color: string) => {
-    switch (color) {
-      case 'emerald':
-        return {
-          bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-          hoverBg: 'hover:bg-emerald-500/20',
-          accentBorder: 'border-t-emerald-500',
-          focusGlow: 'hover:shadow-[0_0_20px_-3px_rgba(16,185,129,0.3)]',
-          btn: 'bg-emerald-500 hover:bg-emerald-600 shadow-[0_4px_12px_rgba(16,185,129,0.25)]',
-          badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-        };
-      case 'blue':
-        return {
-          bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
-          hoverBg: 'hover:bg-blue-500/20',
-          accentBorder: 'border-t-blue-500',
-          focusGlow: 'hover:shadow-[0_0_20px_-3px_rgba(59,130,246,0.3)]',
-          btn: 'bg-blue-500 hover:bg-blue-600 shadow-[0_4px_12px_rgba(59,130,246,0.25)]',
-          badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-        };
-      case 'purple':
-        default:
-        return {
-          bg: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
-          hoverBg: 'hover:bg-purple-500/20',
-          accentBorder: 'border-t-purple-500',
-          focusGlow: 'hover:shadow-[0_0_20px_-3px_rgba(168,85,247,0.3)]',
-          btn: 'bg-purple-500 hover:bg-purple-600 shadow-[0_4px_12px_rgba(168,85,247,0.25)]',
-          badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-        };
-    }
-  };
-
-  const styleSet = getColorClasses(zone.color);
-
   return (
-    <div
-      ref={setNodeRef}
-      className={`flex flex-col flex-shrink-0 w-80 lg:w-96 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 transition-all duration-300 border-t-4 ${styleSet.accentBorder} ${styleSet.focusGlow} ${
-        isOver ? 'bg-slate-900/60 scale-[1.01] border-slate-700' : ''
-      }`}
-    >
-      {/* Column Header */}
-      <div className="flex flex-col gap-2 mb-4">
-        <div className="flex items-center justify-between">
+<div
+        ref={setNodeRef}
+        className={`bg-muted/40 backdrop-blur-sm border border-border rounded-xl p-4 shadow-lg flex flex-col gap-3 flex-shrink-0 w-80 lg:w-96 ${
+          isOver ? 'bg-muted scale-[1.01] border-foreground/20' : ''
+        }`}
+      >
+      {/* ── Column Header ─────────────────────────────────────── */}
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-slate-100">{zone.name}</h3>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${styleSet.badge}`}>
-              {activeTasks.length} active
+            <span className={`${c.headerIcon} flex-shrink-0`}>
+              <ZoneIcon name={zone.icon} size={17} />
+            </span>
+            <h3 className="text-xl font-display text-foreground truncate">{zone.name}</h3>
+            <span className={`text-sm text-muted-foreground tabular-nums ${c.badge}`}>
+              {activeTasks.length}
             </span>
           </div>
-          
-          {/* Start Focus Guardian Action */}
+          {zone.description && (
+            <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-2">
+              {zone.description}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-muted/60 transition-colors"
+            title={`Edit ${zone.name}`}
+          >
+            <PencilSimple size={13} />
+          </button>
+          <button
+            onClick={() => { if (window.confirm(`Delete zone "${zone.name}" and all its tasks?`)) deleteZone(zone.id); }}
+            className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-muted/60 transition-colors"
+            title={`Delete ${zone.name}`}
+          >
+            <Trash size={13} />
+          </button>
+
           <button
             onClick={() => startFocus(zone.id, 'count-up')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-950 transition-all duration-300 transform active:scale-95 ${styleSet.btn}`}
-            title={`Enter immersive Flow Guardian for ${zone.name}`}
+            className="liquid-glass rounded-full px-4 py-1 text-xs flex items-center gap-1 hover:scale-105 hover:text-primary transition"
+            title={`Enter Focus Guardian for ${zone.name}`}
           >
-            <Play size={12} fill="currentColor" />
+            <Crosshair weight="bold" className="w-4 h-4" />
             <span>Focus</span>
           </button>
         </div>
-        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed bg-slate-900/40 p-2 rounded-lg border border-slate-900">
-          {zone.description}
-        </p>
       </div>
 
-      {/* Task List (Sortable Droppable Target) */}
-      <div className="flex-1 flex flex-col gap-3 min-h-[300px] py-1 overflow-y-auto max-h-[500px]">
+      {/* ── Task list ─────────────────────────────────────────── */}
+      <div className="flex-1 space-y-2 min-h-[280px] py-1 overflow-y-auto max-h-[520px]">
         <SortableContext items={activeTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {activeTasks.length > 0 ? (
-            activeTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
-            ))
+            activeTasks.map((task) => <TaskItem key={task.id} task={task} />)
           ) : (
             !showAddTaskForm && (
-              <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-900 rounded-xl p-4 text-center">
-                <HelpCircle className="text-slate-600 mb-2" size={24} />
-                <p className="text-xs text-slate-500">No active tasks in this zone.</p>
-                <p className="text-[10px] text-slate-600 mt-1">Batch new work below to shield focus.</p>
+              <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-xl p-4 text-center gap-2 bg-muted/20">
+                <ZoneIcon name={zone.icon} size={22} />
+                <p className="text-xs text-muted-foreground font-medium">No tasks batched here yet.</p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[180px]">
+                  Add work that requires the same type of focus as this zone.
+                </p>
               </div>
             )
           )}
         </SortableContext>
 
-        {/* Collapsible Completed Section */}
+        {/* Collapsible completed section */}
         {completedTasks.length > 0 && (
-          <div className="mt-3 border-t border-slate-900 pt-3">
+          <div className="mt-3 bg-muted/20 border border-border rounded-xl p-3">
             <button
               onClick={() => setShowCompleted(!showCompleted)}
-              className="flex items-center justify-between w-full text-xs text-slate-500 hover:text-slate-300 transition-colors font-medium mb-2 px-1"
+              className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               <div className="flex items-center gap-1.5">
-                {showCompleted ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <span>Completed Tasks</span>
+                {showCompleted ? <CaretDown size={14} /> : <CaretRight size={14} />}
+                <span>Completed</span>
               </div>
-              <span className="bg-slate-900/60 px-1.5 py-0.5 rounded text-[10px]">
+              <span className="bg-background/60 px-1.5 py-0.5 rounded text-[10px] tabular-nums border border-border">
                 {completedTasks.length}
               </span>
             </button>
 
             {showCompleted && (
-              <div className="flex flex-col gap-2 animate-fade-in pl-1">
+              <div className="flex flex-col gap-2 animate-fade-in mt-3 pt-3 border-t border-border">
                 {completedTasks.map((task) => (
                   <TaskItem key={task.id} task={task} />
                 ))}
@@ -150,52 +228,58 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
         )}
       </div>
 
-      {/* Add Task Control */}
-      <div className="mt-4 border-t border-slate-900/60 pt-3">
+      {/* ── Add Task ──────────────────────────────────────────── */}
+      <div className="mt-4 border-t border-border pt-3">
         {showAddTaskForm ? (
-          <form onSubmit={handleAddTask} className="flex flex-col gap-3 p-3 bg-slate-900/60 border border-slate-800 rounded-xl animate-slide-up">
+          <form
+            onSubmit={handleAddTask}
+            className="flex flex-col gap-3 p-3 bg-muted/40 border border-border rounded-xl animate-slide-up"
+          >
             <input
               type="text"
               required
-              placeholder="What task needs to be batched?"
+              autoFocus
+              placeholder="Task title…"
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
-              className="bg-dark-900 border border-slate-800 focus:border-brand-500 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition-colors"
+              className="bg-muted/50 border border-border focus:border-brand rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/70 focus:outline-none transition-colors"
             />
             <textarea
               placeholder="Description (optional)"
               value={newTaskDesc}
               onChange={(e) => setNewTaskDesc(e.target.value)}
               rows={2}
-              className="bg-dark-900 border border-slate-800 focus:border-brand-500 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none resize-none transition-colors"
+              className="bg-muted/50 border border-border focus:border-brand rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/70 focus:outline-none resize-none transition-colors"
             />
             <div className="flex items-center justify-end gap-2 text-xs">
               <button
                 type="button"
                 onClick={() => setShowAddTaskForm(false)}
-                className="px-3 py-1.5 text-slate-400 hover:text-slate-200 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors bg-muted/50 border border-border"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                className="liquid-glass font-medium px-3 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95 flex items-center gap-1 text-foreground"
               >
                 <Plus size={13} />
-                <span>Batch Task</span>
+                <span>Add task</span>
               </button>
             </div>
           </form>
         ) : (
           <button
             onClick={() => setShowAddTaskForm(true)}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-dashed border-slate-800 hover:border-slate-700 bg-slate-950 text-xs text-slate-400 hover:text-slate-200 transition-all active:scale-[0.99]"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-dashed border-border hover:border-foreground/30 bg-muted/20 text-xs text-muted-foreground hover:text-foreground transition-all active:scale-[0.99]"
           >
             <Plus size={14} />
             <span>Batch task to this zone</span>
           </button>
         )}
       </div>
+
+      {showEditModal && <CreateZoneModal zone={zone} onClose={() => setShowEditModal(false)} />}
     </div>
   );
 };

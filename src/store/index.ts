@@ -1,31 +1,31 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, ContextZone, Task, SwitchEvent, UserBadge } from '../types';
+import type { BackendBootstrap, AnalyticsSummary } from '../services/api';
+import { api, setApiToken } from '../services/api';
+import type { ContextZone, SwitchEvent, Task, ToastNotice, User, UserBadge } from '../types';
 
 interface FlowrState {
-  // Auth State
   currentUser: User | null;
   token: string | null;
   setAuth: (user: User | null, token: string | null) => void;
   logout: () => void;
 
-  // Zones State
   zones: ContextZone[];
   setZones: (zones: ContextZone[]) => void;
-  addZone: (name: string, description: string, color: string) => ContextZone;
-  updateZone: (id: string, name: string, description: string, color: string) => void;
+  addZone: (name: string, description: string, color: string, icon?: string) => ContextZone;
+  updateZone: (id: string, name: string, description: string, color: string, icon?: string) => void;
   deleteZone: (id: string) => void;
 
-  // Tasks State
   tasks: Task[];
   setTasks: (tasks: Task[]) => void;
   addTask: (title: string, description: string | undefined, zoneId: string) => Task;
+  completeTask: (id: string) => void;
   toggleTask: (id: string) => void;
+  toggleComplete: (id: string) => void;
   deleteTask: (id: string) => void;
   moveTask: (taskId: string, targetZoneId: string) => void;
   reorderTasks: (zoneId: string, startIndex: number, endIndex: number) => void;
 
-  // Flow Guardian Focus State
   activeZoneId: string | null;
   isGuardianActive: boolean;
   focusStartTime: string | null;
@@ -33,57 +33,71 @@ interface FlowrState {
   pomodoroDurationMinutes: number;
   pomodoroSecondsLeft: number;
   isTimerRunning: boolean;
-  
   startFocus: (zoneId: string, mode?: 'count-up' | 'pomodoro', durationMinutes?: number) => void;
   endFocus: (bypassedBuffer?: boolean) => void;
   tickTimer: () => void;
   toggleTimerRunning: () => void;
 
-  // Transition Buffer State
   isBufferActive: boolean;
   bufferSecondsLeft: number;
   bufferFromZoneId: string | null;
   bufferToZoneId: string | null;
   bufferBypassed: boolean;
-  
   startBuffer: (fromZoneId: string, toZoneId: string | null) => void;
   tickBuffer: () => void;
   skipBuffer: () => void;
   resetBuffer: () => void;
 
-  // Whiplash Analytics State
   switches: SwitchEvent[];
   badges: UserBadge[];
-  recordSwitch: (fromZoneId: string | null, toZoneId: string) => void;
-  unlockBadge: (badgeType: string, name: string, description: string, icon: string) => void;
+  addSwitch: (fromZoneId: string | null, toZoneId: string) => SwitchEvent;
+  recordSwitch: (fromZoneId: string | null, toZoneId: string) => SwitchEvent;
+  earnBadge: (badgeType: string, name: string, description: string, icon: string) => UserBadge;
+  unlockBadge: (badgeType: string, name: string, description: string, icon: string) => UserBadge;
+
+  toasts: ToastNotice[];
+  pushToast: (message: string, kind?: ToastNotice['kind']) => string;
+  dismissToast: (id: string) => void;
+
+  hasHydratedFromBackend: boolean;
+  hydrateFromBackend: (payload: BackendBootstrap) => void;
+
+  analytics: AnalyticsSummary | null;
+  analyticsLoading: boolean;
+  fetchAnalytics: () => Promise<void>;
 }
 
-// Initial mockup data to populate Flowr instantly and beautifully
+const nowIso = () => new Date().toISOString();
+const nextId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
 const defaultZones = (userId: string): ContextZone[] => [
   {
     id: 'z-deep-code',
-    name: '💻 Deep Code',
+    name: 'Deep Code',
     description: 'Coding, refactoring, building architecture. Focus block.',
     color: 'emerald',
-    createdAt: new Date().toISOString(),
+    icon: 'Code',
+    createdAt: nowIso(),
     userId,
   },
   {
     id: 'z-comms',
-    name: '💬 Comms & Sync',
+    name: 'Comms & Sync',
     description: 'Slack, emails, pull request reviews, team chats.',
     color: 'blue',
-    createdAt: new Date().toISOString(),
+    icon: 'MessageSquare',
+    createdAt: nowIso(),
     userId,
   },
   {
     id: 'z-admin',
-    name: '⚙️ Admin & Planning',
+    name: 'Admin & Planning',
     description: 'Jira tickets, scheduling, timesheets, documentation.',
     color: 'purple',
-    createdAt: new Date().toISOString(),
+    icon: 'Settings',
+    createdAt: nowIso(),
     userId,
-  }
+  },
 ];
 
 const defaultTasks = (userId: string): Task[] => [
@@ -94,7 +108,7 @@ const defaultTasks = (userId: string): Task[] => [
     completed: false,
     zoneId: 'z-deep-code',
     userId,
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso(),
   },
   {
     id: 't2',
@@ -103,7 +117,7 @@ const defaultTasks = (userId: string): Task[] => [
     completed: false,
     zoneId: 'z-deep-code',
     userId,
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso(),
   },
   {
     id: 't3',
@@ -112,8 +126,8 @@ const defaultTasks = (userId: string): Task[] => [
     completed: true,
     zoneId: 'z-deep-code',
     userId,
-    createdAt: new Date().toISOString(),
-    completedAt: new Date().toISOString(),
+    createdAt: nowIso(),
+    completedAt: nowIso(),
   },
   {
     id: 't4',
@@ -122,7 +136,7 @@ const defaultTasks = (userId: string): Task[] => [
     completed: false,
     zoneId: 'z-comms',
     userId,
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso(),
   },
   {
     id: 't5',
@@ -131,7 +145,7 @@ const defaultTasks = (userId: string): Task[] => [
     completed: false,
     zoneId: 'z-comms',
     userId,
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso(),
   },
   {
     id: 't6',
@@ -140,105 +154,175 @@ const defaultTasks = (userId: string): Task[] => [
     completed: false,
     zoneId: 'z-admin',
     userId,
-    createdAt: new Date().toISOString(),
-  }
+    createdAt: nowIso(),
+  },
 ];
 
 const defaultUser: User = {
   id: 'guest-user',
   email: 'flowr-focus@deepmind.com',
   name: 'Focus Builder',
-  createdAt: new Date().toISOString(),
+  createdAt: nowIso(),
 };
+
+function revertWithToast(
+  setToast: (message: string, kind?: ToastNotice['kind']) => string,
+  message: string,
+  error: unknown,
+) {
+  const detail = error instanceof Error ? error.message : 'Unknown error';
+  setToast(`${message}: ${detail}`, 'error');
+}
 
 export const useFlowrStore = create<FlowrState>()(
   persist(
     (set, get) => ({
-      // Auth State Initializer
       currentUser: defaultUser,
       token: 'guest-token',
-      setAuth: (user, token) => set({ currentUser: user, token }),
-      logout: () => set({ currentUser: null, token: null, activeZoneId: null, isGuardianActive: false }),
+      setAuth: (user, token) => {
+        set({ currentUser: user, token });
+        setApiToken(token);
+      },
+      logout: () => {
+        set({ currentUser: null, token: null, activeZoneId: null, isGuardianActive: false });
+        setApiToken('guest-token');
+      },
 
-      // Zones
       zones: defaultZones('guest-user'),
       setZones: (zones) => set({ zones }),
-      addZone: (name, description, color) => {
+      addZone: (name, description, color, icon) => {
         const userId = get().currentUser?.id || 'guest-user';
-        const newZone: ContextZone = {
-          id: `z-${Date.now()}`,
+        const zone: ContextZone = {
+          id: nextId('z'),
           name,
           description,
           color,
-          createdAt: new Date().toISOString(),
+          icon,
+          createdAt: nowIso(),
           userId,
         };
-        set((state) => ({ zones: [...state.zones, newZone] }));
-        return newZone;
-      },
-      updateZone: (id, name, description, color) => set((state) => ({
-        zones: state.zones.map((z) => z.id === id ? { ...z, name, description, color } : z)
-      })),
-      deleteZone: (id) => set((state) => ({
-        zones: state.zones.filter((z) => z.id !== id),
-        tasks: state.tasks.filter((t) => t.zoneId !== id),
-        activeZoneId: state.activeZoneId === id ? null : state.activeZoneId,
-        isGuardianActive: state.activeZoneId === id ? false : state.isGuardianActive
-      })),
+        const snapshot = get().zones;
+        set((state) => ({ zones: [...state.zones, zone] }));
 
-      // Tasks
+        void api.createZone(zone).catch((error) => {
+          set({ zones: snapshot });
+          revertWithToast(get().pushToast, 'Failed to save zone', error);
+        });
+
+        return zone;
+      },
+      updateZone: (id, name, description, color, icon) => {
+        const snapshot = get().zones;
+        const nextZones = snapshot.map((zone) => (
+          zone.id === id ? { ...zone, name, description, color, icon } : zone
+        ));
+        set({ zones: nextZones });
+
+        const updated = nextZones.find((zone) => zone.id === id);
+        if (!updated) return;
+
+        void api.updateZone(id, updated).catch((error) => {
+          set({ zones: snapshot });
+          revertWithToast(get().pushToast, 'Failed to update zone', error);
+        });
+      },
+      deleteZone: (id) => {
+        const snapshot = {
+          zones: get().zones,
+          tasks: get().tasks,
+          activeZoneId: get().activeZoneId,
+          isGuardianActive: get().isGuardianActive,
+        };
+
+        set((state) => ({
+          zones: state.zones.filter((zone) => zone.id !== id),
+          tasks: state.tasks.filter((task) => task.zoneId !== id),
+          activeZoneId: state.activeZoneId === id ? null : state.activeZoneId,
+          isGuardianActive: state.activeZoneId === id ? false : state.isGuardianActive,
+        }));
+
+        void api.deleteZone(id).catch((error) => {
+          set(snapshot);
+          revertWithToast(get().pushToast, 'Failed to delete zone', error);
+        });
+      },
+
       tasks: defaultTasks('guest-user'),
       setTasks: (tasks) => set({ tasks }),
       addTask: (title, description, zoneId) => {
         const userId = get().currentUser?.id || 'guest-user';
-        const newTask: Task = {
-          id: `t-${Date.now()}`,
+        const task: Task = {
+          id: nextId('t'),
           title,
           description,
           completed: false,
           zoneId,
           userId,
-          createdAt: new Date().toISOString(),
+          createdAt: nowIso(),
         };
-        set((state) => ({ tasks: [...state.tasks, newTask] }));
-        
-        // Smart Batching v1 simple: Check if this new task matches keywords of another zone
-        // This is handled at dashboard or quick add, we return task here.
-        return newTask;
-      },
-      toggleTask: (id) => set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === id
-            ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : null }
-            : t
-        )
-      })),
-      deleteTask: (id) => set((state) => ({
-        tasks: state.tasks.filter((t) => t.id !== id)
-      })),
-      moveTask: (taskId, targetZoneId) => {
-        const task = get().tasks.find((t) => t.id === taskId);
-        if (!task) return;
-        const oldZoneId = task.zoneId;
-        if (oldZoneId === targetZoneId) return;
+        const snapshot = get().tasks;
+        set((state) => ({ tasks: [...state.tasks, task] }));
 
-        // Save switch or re-link
-        set((state) => ({
-          tasks: state.tasks.map((t) => t.id === taskId ? { ...t, zoneId: targetZoneId } : t)
-        }));
+        void api.createTask(task).catch((error) => {
+          set({ tasks: snapshot });
+          revertWithToast(get().pushToast, 'Failed to save task', error);
+        });
+
+        return task;
+      },
+      completeTask: (id) => {
+        const snapshot = get().tasks;
+        const nextTasks = snapshot.map((task) => (
+          task.id === id
+            ? {
+                ...task,
+                completed: !task.completed,
+                completedAt: !task.completed ? nowIso() : null,
+              }
+            : task
+        ));
+        set({ tasks: nextTasks });
+
+        void api.toggleTask(id).catch((error) => {
+          set({ tasks: snapshot });
+          revertWithToast(get().pushToast, 'Failed to update task', error);
+        });
+      },
+      toggleTask: (id) => get().completeTask(id),
+      toggleComplete: (id) => get().completeTask(id),
+      deleteTask: (id) => {
+        const snapshot = get().tasks;
+        set((state) => ({ tasks: state.tasks.filter((task) => task.id !== id) }));
+
+        void api.deleteTask(id).catch((error) => {
+          set({ tasks: snapshot });
+          revertWithToast(get().pushToast, 'Failed to delete task', error);
+        });
+      },
+      moveTask: (taskId, targetZoneId) => {
+        const snapshot = get().tasks;
+        const nextTasks = snapshot.map((task) => (
+          task.id === taskId ? { ...task, zoneId: targetZoneId } : task
+        ));
+        set({ tasks: nextTasks });
+
+        void api.moveTask(taskId, targetZoneId).catch((error) => {
+          set({ tasks: snapshot });
+          revertWithToast(get().pushToast, 'Failed to move task', error);
+        });
       },
       reorderTasks: (zoneId, startIndex, endIndex) => {
-        const zoneTasks = get().tasks.filter((t) => t.zoneId === zoneId);
-        const otherTasks = get().tasks.filter((t) => t.zoneId !== zoneId);
-        
+        const zoneTasks = get().tasks.filter((task) => task.zoneId === zoneId);
+        const otherTasks = get().tasks.filter((task) => task.zoneId !== zoneId);
+
         const reordered = Array.from(zoneTasks);
         const [removed] = reordered.splice(startIndex, 1);
+        if (!removed) return;
         reordered.splice(endIndex, 0, removed);
-        
+
         set({ tasks: [...otherTasks, ...reordered] });
       },
 
-      // Flow Guardian Focus State
       activeZoneId: null,
       isGuardianActive: false,
       focusStartTime: null,
@@ -246,40 +330,27 @@ export const useFlowrStore = create<FlowrState>()(
       pomodoroDurationMinutes: 25,
       pomodoroSecondsLeft: 25 * 60,
       isTimerRunning: false,
-
       startFocus: (zoneId, mode = 'count-up', durationMinutes = 25) => {
-        const oldZoneId = get().activeZoneId;
-
-        // Record a switch if switching from another zone
-        if (oldZoneId && oldZoneId !== zoneId) {
-          get().recordSwitch(oldZoneId, zoneId);
+        const previousZoneId = get().activeZoneId;
+        if (previousZoneId && previousZoneId !== zoneId) {
+          get().recordSwitch(previousZoneId, zoneId);
         }
 
         set({
           activeZoneId: zoneId,
           isGuardianActive: true,
-          focusStartTime: new Date().toISOString(),
+          focusStartTime: nowIso(),
           timerMode: mode,
           pomodoroDurationMinutes: durationMinutes,
           pomodoroSecondsLeft: durationMinutes * 60,
           isTimerRunning: true,
-          // Cancel any buffer
           isBufferActive: false,
         });
-
-        // Trigger request for Fullscreen API on window if in browser
-        try {
-          if (typeof document.documentElement.requestFullscreen === 'function') {
-            // Let the component trigger it since requestFullscreen requires user interaction event
-          }
-        } catch (e) {}
       },
-
       endFocus: (bypassedBuffer = false) => {
         const activeZoneId = get().activeZoneId;
         if (!activeZoneId) return;
 
-        // Exit focus guardian
         set({
           isGuardianActive: false,
           isTimerRunning: false,
@@ -287,46 +358,40 @@ export const useFlowrStore = create<FlowrState>()(
           focusStartTime: null,
         });
 
-        // Start Transition Buffer unless explicitly bypassed
         if (!bypassedBuffer) {
           get().startBuffer(activeZoneId, null);
         }
       },
-
       tickTimer: () => {
         if (!get().isTimerRunning) return;
-        
+
         if (get().timerMode === 'pomodoro') {
           const timeLeft = get().pomodoroSecondsLeft;
           if (timeLeft <= 1) {
-            // Pomodoro finished! Play alert, complete focus session
             set({ pomodoroSecondsLeft: 0, isTimerRunning: false });
-            get().endFocus(false); // start buffer
+            get().pushToast('Pomodoro complete! Time to recharge.', 'success');
+            get().endFocus(false);
           } else {
             set({ pomodoroSecondsLeft: timeLeft - 1 });
           }
         }
       },
-
       toggleTimerRunning: () => set((state) => ({ isTimerRunning: !state.isTimerRunning })),
 
-      // Transition Buffer State
       isBufferActive: false,
-      bufferSecondsLeft: 300, // 5 minutes standard
+      bufferSecondsLeft: 300,
       bufferFromZoneId: null,
       bufferToZoneId: null,
       bufferBypassed: false,
-
       startBuffer: (fromZoneId, toZoneId) => {
         set({
           isBufferActive: true,
-          bufferSecondsLeft: 300, // 300 seconds = 5 minutes
+          bufferSecondsLeft: 300,
           bufferFromZoneId: fromZoneId,
           bufferToZoneId: toZoneId,
           bufferBypassed: false,
         });
       },
-
       tickBuffer: () => {
         if (!get().isBufferActive) return;
         const timeLeft = get().bufferSecondsLeft;
@@ -341,7 +406,6 @@ export const useFlowrStore = create<FlowrState>()(
           set({ bufferSecondsLeft: timeLeft - 1 });
         }
       },
-
       skipBuffer: () => {
         set({
           isBufferActive: false,
@@ -349,76 +413,136 @@ export const useFlowrStore = create<FlowrState>()(
           bufferFromZoneId: null,
           bufferToZoneId: null,
         });
-        
-        // Log a skipped-buffer alert or adjust statistics (e.g. increase whiplash estimation!)
+
         const activeSwitches = get().switches;
         if (activeSwitches.length > 0) {
-          // Increase whiplash penalty for skipping breaks!
           const lastSwitch = activeSwitches[activeSwitches.length - 1];
-          const updatedSwitches = activeSwitches.map(s => 
-            s.id === lastSwitch.id 
-              ? { ...s, estimatedTimeLostSeconds: s.estimatedTimeLostSeconds + 360 } // penalty of 6 mins (360s)
-              : s
-          );
+          const updatedSwitches = activeSwitches.map((switchEvent) => (
+            switchEvent.id === lastSwitch.id
+              ? { ...switchEvent, estimatedTimeLostSeconds: switchEvent.estimatedTimeLostSeconds + 360 }
+              : switchEvent
+          ));
           set({ switches: updatedSwitches });
         }
       },
-
       resetBuffer: () => set({ isBufferActive: false, bufferSecondsLeft: 300 }),
 
-      // Whiplash Analytics State
       switches: [],
       badges: [],
-      recordSwitch: (fromZoneId, toZoneId) => {
+      addSwitch: (fromZoneId, toZoneId) => {
         const userId = get().currentUser?.id || 'guest-user';
-        const newSwitch: SwitchEvent = {
-          id: `sw-${Date.now()}`,
+        const switchEvent: SwitchEvent = {
+          id: nextId('sw'),
           userId,
           fromZoneId,
           toZoneId,
-          timestamp: new Date().toISOString(),
-          estimatedTimeLostSeconds: 900, // standard 15 minute context cost
+          timestamp: nowIso(),
+          estimatedTimeLostSeconds: 900,
         };
-        
-        set((state) => ({ switches: [...state.switches, newSwitch] }));
+        const snapshot = get().switches;
+        const badgeSnapshot = get().badges;
+        set((state) => ({ switches: [...state.switches, switchEvent] }));
 
-        // Check and trigger badges if they qualify!
-        const totalSwitches = get().switches.length;
+        void api.addSwitch(switchEvent).catch((error) => {
+          set({ switches: snapshot, badges: badgeSnapshot });
+          revertWithToast(get().pushToast, 'Failed to record switch', error);
+        });
+
+        const totalSwitches = snapshot.length + 1;
         if (totalSwitches === 1) {
           get().unlockBadge(
             'first-switch',
             'Whiplash Witness',
             'Tracked your first cognitive context switch. Awareness is step one.',
-            '👁️'
+            '👁️',
           );
         } else if (totalSwitches === 5) {
           get().unlockBadge(
             'five-switches',
             'Context Juggler',
             'Logged 5 context switches today. Cognitive friction is rising!',
-            '🤹'
+            '🤹',
           );
         }
+
+        return switchEvent;
       },
+      recordSwitch: (fromZoneId, toZoneId) => get().addSwitch(fromZoneId, toZoneId),
+      earnBadge: (badgeType, name, description, icon) => {
+        const existing = get().badges.find((badge) => badge.badgeType === badgeType);
+        if (existing) return existing;
 
-      unlockBadge: (badgeType, name, description, icon) => {
-        const alreadyUnlocked = get().badges.some((b) => b.badgeType === badgeType);
-        if (alreadyUnlocked) return;
-
-        const newBadge: UserBadge = {
-          id: `bdg-${Date.now()}`,
+        const badge: UserBadge = {
+          id: nextId('bdg'),
           badgeType,
           name,
           description,
           icon,
-          unlockedAt: new Date().toISOString(),
+          unlockedAt: nowIso(),
         };
+        const snapshot = get().badges;
+        set((state) => ({ badges: [...state.badges, badge] }));
 
-        set((state) => ({ badges: [...state.badges, newBadge] }));
-      }
+        void api.earnBadge(badge).catch((error) => {
+          set({ badges: snapshot });
+          revertWithToast(get().pushToast, 'Failed to unlock badge', error);
+        });
+
+        return badge;
+      },
+      unlockBadge: (badgeType, name, description, icon) => get().earnBadge(badgeType, name, description, icon),
+
+      toasts: [],
+      pushToast: (message, kind = 'error') => {
+        const id = nextId('toast');
+        const toast: ToastNotice = {
+          id,
+          kind,
+          message,
+          createdAt: nowIso(),
+        };
+        set((state) => ({ toasts: [...state.toasts, toast] }));
+
+        if (typeof window !== 'undefined') {
+          window.setTimeout(() => {
+            set((state) => ({ toasts: state.toasts.filter((entry) => entry.id !== id) }));
+          }, 4000);
+        }
+
+        return id;
+      },
+      dismissToast: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
+
+      hasHydratedFromBackend: false,
+      hydrateFromBackend: (payload) => {
+        setApiToken(payload.token);
+        set({
+          currentUser: payload.user,
+          token: payload.token,
+          zones: payload.zones,
+          tasks: payload.tasks,
+          switches: payload.switches,
+          badges: payload.badges,
+          hasHydratedFromBackend: true,
+        });
+        void get().fetchAnalytics();
+      },
+
+      analytics: null,
+      analyticsLoading: false,
+      fetchAnalytics: async () => {
+        set({ analyticsLoading: true });
+        try {
+          const summary = await api.getAnalyticsSummary();
+          set({ analytics: summary, analyticsLoading: false });
+        } catch {
+          set({ analyticsLoading: false });
+        }
+      },
     }),
     {
-      name: 'flowr-app-state', // localStorage key
+      name: 'flowr-app-state',
+      skipHydration: true,
       partialize: (state) => ({
         currentUser: state.currentUser,
         token: state.token,
@@ -427,6 +551,6 @@ export const useFlowrStore = create<FlowrState>()(
         switches: state.switches,
         badges: state.badges,
       }),
-    }
-  )
+    },
+  ),
 );

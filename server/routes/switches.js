@@ -1,12 +1,12 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { getAll, create } from '../models/switch.js';
+import { getAll, getToday, create } from '../models/switch.js';
 
 const router = express.Router();
 
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const switches = getAll(req.user.id);
+    const switches = await getAll(req.user.id);
     res.json(switches);
   } catch (err) {
     console.error(err);
@@ -14,7 +14,17 @@ router.get('/', authenticateToken, (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, (req, res) => {
+router.get('/today', authenticateToken, async (req, res) => {
+  try {
+    const switches = await getToday(req.user.id);
+    res.json(switches);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch today switches' });
+  }
+});
+
+router.post('/', authenticateToken, async (req, res) => {
   const { fromZoneId, toZoneId, estimatedTimeLostSeconds } = req.body;
 
   if (!toZoneId) {
@@ -22,8 +32,8 @@ router.post('/', authenticateToken, (req, res) => {
   }
 
   try {
-    const switchId = `sw-${Date.now()}`;
-    const newSwitch = create(
+    const switchId = req.body.id || `sw-${Date.now()}`;
+    const newSwitch = await create(
       switchId,
       fromZoneId || null,
       toZoneId,

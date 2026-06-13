@@ -1,18 +1,23 @@
 import db from '../db.js';
 
-export const findById = (id) => {
-  return db.prepare('SELECT id, email, name, created_at FROM users WHERE id = ?').get(id);
+export const findById = async (id) => {
+  const { rows } = await db.query(
+    'SELECT id, email, name, created_at FROM users WHERE id = $1',
+    [id]
+  );
+  return rows[0] || null;
 };
 
-export const findByEmail = (email) => {
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+export const findByEmail = async (email) => {
+  const { rows } = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  return rows[0] || null;
 };
 
-export const create = (id, email, name, passwordHash) => {
-  db.prepare(`
-    INSERT INTO users (id, email, name, password_hash, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, email, name, passwordHash, new Date().toISOString());
-  
+export const create = async (id, email, name, passwordHash) => {
+  await db.query(
+    `INSERT INTO users (id, email, name, password_hash, created_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [id, email, name, passwordHash, new Date().toISOString()]
+  );
   return { id, email, name };
 };

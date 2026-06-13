@@ -10,6 +10,7 @@ export interface ContextZone {
   name: string;
   description: string;
   color: string; // Tailwind color class or hex (e.g., 'emerald', 'blue', 'purple')
+  icon?: string;  // Lucide icon name (e.g., 'Code', 'Mail', 'Calendar', etc.)
   createdAt: string;
   userId: string;
 }
@@ -62,4 +63,11 @@ export interface WhiplashStats {
   focusTimePerZone: Record<string, number>; // zoneId -> seconds
   recentSwitches: SwitchEvent[];
   badges: UserBadge[];
+}
+
+export interface ToastNotice {
+  id: string;
+  kind: 'success' | 'error' | 'info';
+  message: string;
+  createdAt: string;
 }

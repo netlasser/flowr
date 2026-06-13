@@ -4,9 +4,9 @@ import { getAll, unlock } from '../models/badge.js';
 
 const router = express.Router();
 
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const badges = getAll(req.user.id);
+    const badges = await getAll(req.user.id);
     res.json(badges);
   } catch (err) {
     console.error(err);
@@ -14,7 +14,17 @@ router.get('/', authenticateToken, (req, res) => {
   }
 });
 
-router.post('/unlock', authenticateToken, (req, res) => {
+router.get('/user', authenticateToken, async (req, res) => {
+  try {
+    const badges = await getAll(req.user.id);
+    res.json(badges);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch user badges' });
+  }
+});
+
+router.post('/unlock', authenticateToken, async (req, res) => {
   const { badgeType, name, description, icon } = req.body;
 
   if (!badgeType || !name || !description || !icon) {
@@ -22,8 +32,8 @@ router.post('/unlock', authenticateToken, (req, res) => {
   }
 
   try {
-    const badgeId = `bdg-${Date.now()}`;
-    const newBadge = unlock(badgeId, badgeType, name, description, icon, req.user.id);
+    const badgeId = req.body.id || `bdg-${Date.now()}`;
+    const newBadge = await unlock(badgeId, badgeType, name, description, icon, req.user.id);
     if (!newBadge) {
       return res.status(400).json({ error: 'Badge already unlocked' });
     }
