@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
   start_time           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   end_time             TIMESTAMP WITH TIME ZONE,
   duration_seconds     INTEGER NOT NULL DEFAULT 0,
-  tasks_completed_count INTEGER NOT NULL DEFAULT 0
+  tasks_completed_count INTEGER NOT NULL DEFAULT 0,
+  completed            BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS idx_focus_sessions_user_id ON focus_sessions(user_id);

@@ -6,7 +6,7 @@ import { TaskItem } from '../task/TaskItem';
 import { CreateZoneModal } from './CreateZoneModal';
 import { useFlowrStore } from '../../store';
 import {
-  Plus, Crosshair, CaretDown, CaretRight,
+  Plus, Crosshair, CaretDown, CaretRight, Info,
   Code, Envelope, Calendar, PencilSimple, Gear, Briefcase,
   BookOpen, Lightbulb, Headphones, Palette, Users, ChartBar,
   Coffee, Globe, Lightning, Target, Stack, Tray, Trash,
@@ -97,6 +97,28 @@ function getColors(color: string): ColorSet {
   return COLOR_MAP[color] ?? COLOR_MAP.purple;
 }
 
+/* ── Zone-aware example task mapping ──────────────────────────────── */
+const ZONE_EXAMPLE_TASKS: Record<string, string[]> = {
+  code:         ['review PR', 'refactor auth module', 'write unit test'],
+  deep:         ['research architecture', 'prototype new feature', 'optimize query'],
+  comms:        ['respond to slack thread', 'review email draft', 'sync meeting notes'],
+  mail:         ['draft quarterly update', 'respond to client', 'clean inbox'],
+  email:        ['draft quarterly update', 'respond to client', 'clean inbox'],
+  admin:        ['update sprint board', 'log timesheet', 'plan weekly agenda'],
+  design:       ['sketch wireframe', 'review mockups', 'iterate on palette'],
+  writing:      ['outline blog post', 'edit draft', 'write documentation'],
+  plan:         ['set quarterly goals', 'prioritise backlog', 'schedule milestones'],
+  research:     ['literature review', 'competitive analysis', 'synthesise findings'],
+};
+
+function examplesForZone(zoneName: string): string[] {
+  const lower = zoneName.toLowerCase();
+  for (const [keyword, examples] of Object.entries(ZONE_EXAMPLE_TASKS)) {
+    if (lower.includes(keyword)) return examples;
+  }
+  return ['organise related tasks', 'batch similar work', 'update status'];
+}
+
 /* ── Component ─────────────────────────────────────────────────────── */
 interface ZoneColumnProps {
   zone: ContextZone;
@@ -104,8 +126,8 @@ interface ZoneColumnProps {
 }
 
 export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
-  const addTask    = useFlowrStore((s) => s.addTask);
-  const startFocus = useFlowrStore((s) => s.startFocus);
+  const addTask           = useFlowrStore((s) => s.addTask);
+  const setFocusIntention = useFlowrStore((s) => s.setFocusIntention);
 
   const [showAddTaskForm, setShowAddTaskForm] = useState(false);
   const [newTaskTitle,    setNewTaskTitle]    = useState('');
@@ -145,6 +167,12 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
               <ZoneIcon name={zone.icon} size={17} />
             </span>
             <h3 className="text-xl font-display text-foreground truncate">{zone.name}</h3>
+            <span className="relative group flex-shrink-0">
+              <Info size={13} className="text-muted-foreground/40 hover:text-muted-foreground cursor-help transition-colors" />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 rounded-lg bg-muted/95 border border-border text-[10px] text-muted-foreground leading-relaxed shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-10">
+                Use this zone for tasks that require the same mental context — e.g., all coding work together, all emails together.
+              </span>
+            </span>
             <span className={`text-sm text-muted-foreground tabular-nums ${c.badge}`}>
               {activeTasks.length}
             </span>
@@ -173,7 +201,7 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
           </button>
 
           <button
-            onClick={() => startFocus(zone.id, 'count-up')}
+            onClick={() => setFocusIntention(zone.id)}
             className="border border-border bg-muted/70 text-foreground rounded-full px-4 py-1 text-xs flex items-center gap-1 hover:bg-muted hover:text-primary hover:scale-105 active:scale-95 transition-all"
             title={`Enter Focus Guardian for ${zone.name}`}
           >
@@ -192,9 +220,11 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
             !showAddTaskForm && (
               <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-xl p-4 text-center gap-2 bg-muted/20">
                 <ZoneIcon name={zone.icon} size={22} />
-                <p className="text-xs text-muted-foreground font-medium">No tasks batched here yet.</p>
-                <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[180px]">
-                  Add work that requires the same type of focus as this zone.
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed max-w-[200px]">
+                  Add tasks that require a <span className="text-foreground">{zone.name}</span> mindset
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[200px]">
+                  e.g. &lsquo;{examplesForZone(zone.name)[0]}&rsquo;, &lsquo;{examplesForZone(zone.name)[1]}&rsquo;
                 </p>
               </div>
             )

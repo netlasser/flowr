@@ -13,6 +13,7 @@ import switchesRouter from './routes/switches.js';
 import badgesRouter from './routes/badges.js';
 import sessionsRouter from './routes/sessions.js';
 import analyticsRouter from './routes/analytics.js';
+import aiRouter from './routes/ai.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +41,7 @@ app.use('/api/switches', switchesRouter);
 app.use('/api/badges', badgesRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/ai', aiRouter);
 
 // Simple Health Status Check
 app.get('/api/health', (req, res) => {

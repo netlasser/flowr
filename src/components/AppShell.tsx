@@ -205,13 +205,24 @@ export function AppShell() {
           >
             <div className="flex items-start justify-between gap-3">
               <p className="m-0 text-xs leading-relaxed">{toast.message}</p>
-              <button
-                type="button"
-                onClick={() => useFlowrStore.getState().dismissToast(toast.id)}
-                className="text-[10px] uppercase tracking-wider text-white/60 transition-colors hover:text-white"
-              >
-                Dismiss
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {toast.action && (
+                  <button
+                    type="button"
+                    onClick={() => { toast.action!.onClick(); useFlowrStore.getState().dismissToast(toast.id); }}
+                    className="text-[10px] uppercase tracking-wider font-bold text-primary transition-colors hover:text-primary/80"
+                  >
+                    {toast.action.label}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => useFlowrStore.getState().dismissToast(toast.id)}
+                  className="text-[10px] uppercase tracking-wider text-white/60 transition-colors hover:text-white"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         ))}

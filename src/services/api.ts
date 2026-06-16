@@ -170,15 +170,36 @@ export const api = {
     });
   },
 
-  endSession(id: string, durationSeconds: number, tasksCompletedCount: number) {
+  endSession(id: string, durationSeconds: number, tasksCompletedCount: number, completed: boolean) {
     return requestJson<FocusSession>(`/sessions/${id}/end`, {
       method: 'PATCH',
-      body: JSON.stringify({ durationSeconds, tasksCompletedCount }),
+      body: JSON.stringify({ durationSeconds, tasksCompletedCount, completed }),
     });
   },
 
   // ── Analytics ─────────────────────────────────────────
   getAnalyticsSummary() {
     return requestJson<AnalyticsSummary>('/analytics/summary');
+  },
+
+  getAvgFocusDuration() {
+    return requestJson<{ avgDurationMinutes: number }>('/analytics/avg-focus-duration');
+  },
+
+  getRecommendations() {
+    return requestJson<{ id: string; type: string; message: string; action?: string }[]>('/analytics/recommendations');
+  },
+
+  // ── AI ───────────────────────────────────────────────
+  suggestZone(taskDescription: string) {
+    return requestJson<{ zoneId: string; zoneName: string }>('/ai/suggest-zone', {
+      method: 'POST',
+      body: JSON.stringify({ description: taskDescription }),
+    });
+  },
+
+  // ── Tasks (extended) ────────────────────────────────
+  getUnbatchedTasks() {
+    return requestJson<Task[]>('/tasks/unbatched');
   },
 };

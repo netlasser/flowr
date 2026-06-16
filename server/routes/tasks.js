@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
+import db from '../db.js';
 import { getAll, findById, create, toggle, move, remove } from '../models/task.js';
 
 const router = express.Router();
@@ -28,6 +29,29 @@ router.post('/', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create task' });
+  }
+});
+
+router.get('/unbatched', authenticateToken, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT * FROM tasks WHERE user_id = $1 AND (zone_id IS NULL OR zone_id = '')`,
+      [req.user.id]
+    );
+    const tasks = rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      completed: r.completed,
+      zoneId: r.zone_id,
+      userId: r.user_id,
+      createdAt: r.created_at,
+      completedAt: r.completed_at,
+    }));
+    res.json(tasks);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch unbatched tasks' });
   }
 });
 

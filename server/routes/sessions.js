@@ -32,10 +32,10 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 router.patch('/:id/end', authenticateToken, async (req, res) => {
-  const { durationSeconds, tasksCompletedCount } = req.body;
+  const { durationSeconds, tasksCompletedCount, completed } = req.body;
 
   try {
-    const updated = await end(req.params.id, durationSeconds || 0, tasksCompletedCount || 0);
+    const updated = await end(req.params.id, durationSeconds || 0, tasksCompletedCount || 0, completed ?? false);
     res.json(updated);
   } catch (err) {
     console.error(err);

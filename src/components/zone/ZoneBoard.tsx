@@ -11,7 +11,9 @@ import { useFlowrStore } from '../../store';
 import { ZoneColumn } from './ZoneColumn';
 import { TaskItem } from '../task/TaskItem';
 import { CreateZoneModal } from './CreateZoneModal';
-import { PlusCircle, Plus, SquaresFour, Stack, WarningCircle, ArrowRight } from '@phosphor-icons/react';
+import { BatchingAssistant } from '../assistant/BatchingAssistant';
+import { useWhiplashAlert } from '../../hooks/useWhiplashAlert';
+import { PlusCircle, Plus, SquaresFour, Stack, WarningCircle, ArrowRight, X, Info } from '@phosphor-icons/react';
 import type { Task } from '../../types';
 
 /* ─── Keyword map for default zones ─────────────────── */
@@ -45,8 +47,19 @@ export const ZoneBoard: React.FC = () => {
   const moveTask = useFlowrStore((state) => state.moveTask);
   const addTask  = useFlowrStore((state) => state.addTask);
 
+  useWhiplashAlert();
+
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => localStorage.getItem('flowr-zone-banner-dismissed') === 'true'
+  );
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    localStorage.setItem('flowr-zone-banner-dismissed', 'true');
+  };
 
   // Smart Batching State
   const [smartInput, setSmartInput]         = useState('');
@@ -220,6 +233,40 @@ export const ZoneBoard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* AI Suggestion Chip */}
+      {smartInput.trim() && (
+        <BatchingAssistant
+          text={smartInput}
+          onAccept={(zoneId) => {
+            if (!smartInput.trim()) return;
+            addTask(smartInput.trim(), 'AI-suggested task', zoneId);
+            setSmartInput('');
+            setSuggestedZoneId(null);
+            setSmartTaskTitle('');
+          }}
+          onDismiss={() => {}}
+        />
+      )}
+
+      {/* Explanatory Banner (dismissible) */}
+      {!bannerDismissed && (
+        <div className="flex items-start gap-3 bg-primary/10 border border-primary/20 rounded-2xl px-5 py-4">
+          <div className="mt-0.5 text-primary flex-shrink-0">
+            <Info size={18} />
+          </div>
+          <p className="text-xs text-foreground/80 leading-relaxed flex-1">
+            Group similar tasks into zones. Work inside one zone at a time to protect your focus.
+          </p>
+          <button
+            onClick={dismissBanner}
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex-shrink-0"
+            aria-label="Dismiss banner"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Zone Columns Board */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

@@ -70,4 +70,5 @@ export interface ToastNotice {
   kind: 'success' | 'error' | 'info';
   message: string;
   createdAt: string;
+  action?: { label: string; onClick: () => void };
 }
