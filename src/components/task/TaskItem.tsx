@@ -4,6 +4,15 @@ import { CSS } from '@dnd-kit/utilities';
 import { DotsSixVertical, CheckCircle, PencilSimple, Trash } from '@phosphor-icons/react';
 import { useFlowrStore } from '../../store/index';
 import type { Task } from '../../types';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '../ui/alert-dialog';
 
 export function TaskItem({ task }: { task: Task }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -51,13 +60,27 @@ export function TaskItem({ task }: { task: Task }) {
         >
           <PencilSimple className="w-4 h-4" />
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this task?')) deleteTask(task.id); }}
-          className="flex-shrink-0 p-1 rounded-md text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-whiplash-500 hover:bg-whiplash-500/10 transition-all"
-          aria-label="Delete task"
-        >
-          <Trash className="w-4 h-4" />
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0 p-1 rounded-md text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-whiplash-500 hover:bg-whiplash-500/10 transition-all"
+              aria-label="Delete task"
+            >
+              <Trash className="w-4 h-4" />
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+            <AlertDialogTitle>Delete task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{task.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}>Delete</AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

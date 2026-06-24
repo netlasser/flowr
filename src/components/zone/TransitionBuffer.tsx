@@ -4,6 +4,7 @@ import {
   Wind, SkipForward, Warning, BatteryCharging, PersonSimpleWalk,
   Drop, Smiley, Eye, Tree, Coffee, Clock, Plus,
 } from '@phosphor-icons/react';
+import { Slider } from '../ui/slider';
 
 const microPrompts: { icon: import('react').ElementType; text: string }[] = [
   { icon: PersonSimpleWalk, text: 'Stand up, stretch, and walk around for a moment.' },
@@ -163,14 +164,13 @@ export const TransitionBuffer: React.FC = () => {
               <span className="font-semibold text-foreground">{selectedBreakMinutes} min</span>
               <span>12 min</span>
             </div>
-            <input
-              type="range"
+            <Slider
               min={3}
               max={12}
               step={1}
-              value={selectedBreakMinutes}
-              onChange={(e) => setSelectedBreakMinutes(Number(e.target.value))}
-              className="w-full accent-buffer-500"
+              value={[selectedBreakMinutes]}
+              onValueChange={([v]) => setSelectedBreakMinutes(v)}
+              className="w-full"
             />
           </div>
 

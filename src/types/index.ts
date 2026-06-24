@@ -3,15 +3,18 @@ export interface User {
   email: string;
   name: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ContextZone {
   id: string;
   name: string;
   description: string;
-  color: string; // Tailwind color class or hex (e.g., 'emerald', 'blue', 'purple')
-  icon?: string;  // Lucide icon name (e.g., 'Code', 'Mail', 'Calendar', etc.)
+  color: string;
+  icon?: string;
+  order?: number;
   createdAt: string;
+  updatedAt?: string;
   userId: string;
 }
 
@@ -20,10 +23,11 @@ export interface Task {
   title: string;
   description?: string;
   completed: boolean;
-  zoneId: string; // The zone column it belongs to
+  zoneId: string;
   userId: string;
+  dueDate?: string | null;
   createdAt: string;
-  completedAt?: string | null;
+  updatedAt?: string;
 }
 
 export type FocusTimerMode = 'count-up' | 'pomodoro';
@@ -35,7 +39,9 @@ export interface FocusSession {
   startTime: string;
   endTime?: string | null;
   durationSeconds: number;
-  tasksCompletedCount: number;
+  completed?: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface SwitchEvent {
@@ -44,16 +50,18 @@ export interface SwitchEvent {
   fromZoneId: string | null;
   toZoneId: string;
   timestamp: string;
-  estimatedTimeLostSeconds: number; // 900 seconds (15 minutes) by default
+  createdAt?: string;
 }
 
 export interface UserBadge {
   id: string;
-  badgeType: string; // 'deep-diver' | 'switch-master' | 'streak-champion' etc.
   name: string;
   description: string;
   icon: string;
-  unlockedAt: string;
+  requirementType?: string;
+  requirementValue?: number;
+  earnedAt?: string;
+  userBadgeId?: string;
 }
 
 export interface WhiplashStats {

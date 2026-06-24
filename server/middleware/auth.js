@@ -1,10 +1,11 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:54321';
-const projectId = SUPABASE_URL.replace(/https?:\/\//, '').split('.')[0];
 const JWKS = createRemoteJWKSet(
   new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
 );
+
+const GUEST_UUID = '00000000-0000-0000-0000-000000000000';
 
 export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -14,9 +15,8 @@ export const authenticateToken = async (req, res, next) => {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  // Legacy guest token for development / backwards compat
   if (token === 'guest-token') {
-    req.user = { id: 'guest-user', email: 'flowr-focus@deepmind.com' };
+    req.user = { id: GUEST_UUID, email: 'flowr-focus@deepmind.com' };
     return next();
   }
 

@@ -303,7 +303,7 @@ export const ZoneBoard: React.FC = () => {
       </DndContext>
 
       {/* Create Zone Modal */}
-      {isModalOpen && <CreateZoneModal onClose={() => setIsModalOpen(false)} />}
+      <CreateZoneModal open={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 };

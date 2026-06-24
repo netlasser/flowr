@@ -10,7 +10,23 @@ import {
   Code, Envelope, Calendar, PencilSimple, Gear, Briefcase,
   BookOpen, Lightbulb, Headphones, Palette, Users, ChartBar,
   Coffee, Globe, Lightning, Target, Stack, Tray, Trash,
+  DotsThreeVertical,
 } from '@phosphor-icons/react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '../ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '../ui/alert-dialog';
 
 /* ── Icon resolver ─────────────────────────────────────────────────── */
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -185,20 +201,40 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-muted/60 transition-colors"
-            title={`Edit ${zone.name}`}
-          >
-            <PencilSimple size={13} />
-          </button>
-          <button
-            onClick={() => { if (window.confirm(`Delete zone "${zone.name}" and all its tasks?`)) deleteZone(zone.id); }}
-            className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-muted/60 transition-colors"
-            title={`Delete ${zone.name}`}
-          >
-            <Trash size={13} />
-          </button>
+          <AlertDialog>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex items-center justify-center p-1.5 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-muted/60 transition-colors"
+                  title={`Zone actions for ${zone.name}`}
+                >
+                  <DotsThreeVertical size={13} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                  <PencilSimple size={13} />
+                  Edit zone
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <AlertDialogTrigger className="w-full">
+                    <Trash size={13} />
+                    Delete zone
+                  </AlertDialogTrigger>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+              <AlertDialogTitle>Delete "{zone.name}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this zone and all tasks within it. This action cannot be undone.
+              </AlertDialogDescription>
+              <div className="flex items-center justify-end gap-2 mt-6">
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deleteZone(zone.id)}>Delete zone</AlertDialogAction>
+              </div>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <button
             onClick={() => setFocusIntention(zone.id)}
@@ -309,7 +345,7 @@ export const ZoneColumn: React.FC<ZoneColumnProps> = ({ zone, tasks }) => {
         )}
       </div>
 
-      {showEditModal && <CreateZoneModal zone={zone} onClose={() => setShowEditModal(false)} />}
+      <CreateZoneModal open={showEditModal} zone={zone} onClose={() => setShowEditModal(false)} />
     </div>
   );
 };

@@ -52,6 +52,7 @@ interface FlowrState {
   consecutiveEarlyEnds: number;
   consecutiveFullCompletions: number;
   lastFocusDurationMinutes: number;
+  sessionCompleted: boolean;
   setLastFocusDuration: (minutes: number) => void;
   fetchAvgFocusDuration: () => Promise<void>;
   adjustPreset: (completionRate: number, readiness: number) => void;
@@ -72,8 +73,8 @@ interface FlowrState {
   badges: UserBadge[];
   addSwitch: (fromZoneId: string | null, toZoneId: string) => SwitchEvent;
   recordSwitch: (fromZoneId: string | null, toZoneId: string) => SwitchEvent;
-  earnBadge: (badgeType: string, name: string, description: string, icon: string) => UserBadge;
-  unlockBadge: (badgeType: string, name: string, description: string, icon: string) => UserBadge;
+  earnBadge: (name: string, description: string, icon: string) => UserBadge;
+  unlockBadge: (name: string, description: string, icon: string) => UserBadge;
 
   zoneSwitchHistory: { zoneId: string; timestamp: number }[];
   addZoneSwitch: (zoneId: string) => void;
@@ -160,7 +161,6 @@ const defaultTasks = (userId: string): Task[] => [
     zoneId: 'z-deep-code',
     userId,
     createdAt: nowIso(),
-    completedAt: nowIso(),
   },
   {
     id: 't4',
@@ -435,10 +435,7 @@ export const useFlowrStore = create<FlowrState>()(
             (Date.now() - new Date(state.focusStartTime || nowIso()).getTime()) / 1000
           );
           elapsedMinutes = Math.floor(totalSeconds / 60);
-          const tasksCompletedCount = state.tasks.filter(
-            (t) => t.zoneId === activeZoneId && t.completed
-          ).length;
-          void api.endSession(sessionId, totalSeconds, tasksCompletedCount, state.sessionCompleted).catch(() => {});
+          void api.endSession(sessionId, totalSeconds, state.sessionCompleted).catch(() => {});
         }
 
         const breakMinutes = Math.min(12, Math.max(3, Math.floor(elapsedMinutes * 0.15)));
@@ -580,13 +577,7 @@ export const useFlowrStore = create<FlowrState>()(
 
         const activeSwitches = get().switches;
         if (activeSwitches.length > 0) {
-          const lastSwitch = activeSwitches[activeSwitches.length - 1];
-          const updatedSwitches = activeSwitches.map((switchEvent) => (
-            switchEvent.id === lastSwitch.id
-              ? { ...switchEvent, estimatedTimeLostSeconds: switchEvent.estimatedTimeLostSeconds + 360 }
-              : switchEvent
-          ));
-          set({ switches: updatedSwitches });
+          set({ switches: [...activeSwitches] });
         }
       },
       resetBuffer: () => set({ isBufferActive: false, bufferSecondsLeft: 300 }),
@@ -705,7 +696,6 @@ export const useFlowrStore = create<FlowrState>()(
           fromZoneId,
           toZoneId,
           timestamp: nowIso(),
-          estimatedTimeLostSeconds: 900,
         };
         const snapshot = get().switches;
         const badgeSnapshot = get().badges;
@@ -719,14 +709,12 @@ export const useFlowrStore = create<FlowrState>()(
         const totalSwitches = snapshot.length + 1;
         if (totalSwitches === 1) {
           get().unlockBadge(
-            'first-switch',
             'Whiplash Witness',
             'Tracked your first cognitive context switch. Awareness is step one.',
             '👁️',
           );
         } else if (totalSwitches === 5) {
           get().unlockBadge(
-            'five-switches',
             'Context Juggler',
             'Logged 5 context switches today. Cognitive friction is rising!',
             '🤹',
@@ -736,29 +724,32 @@ export const useFlowrStore = create<FlowrState>()(
         return switchEvent;
       },
       recordSwitch: (fromZoneId, toZoneId) => get().addSwitch(fromZoneId, toZoneId),
-      earnBadge: (badgeType, name, description, icon) => {
-        const existing = get().badges.find((badge) => badge.badgeType === badgeType);
+      earnBadge: (name, description, icon) => {
+        const existing = get().badges.find((badge) => badge.name === name);
         if (existing) return existing;
 
         const badge: UserBadge = {
           id: nextId('bdg'),
-          badgeType,
           name,
           description,
           icon,
-          unlockedAt: nowIso(),
+          earnedAt: nowIso(),
         };
         const snapshot = get().badges;
         set((state) => ({ badges: [...state.badges, badge] }));
 
-        void api.earnBadge(badge).catch((error) => {
+        void api.checkBadges().then((res) => {
+          if (res.awards.length === 0) {
+            set({ badges: snapshot });
+          }
+        }).catch((error) => {
           set({ badges: snapshot });
           revertWithToast(get().pushToast, 'Failed to unlock badge', error);
         });
 
         return badge;
       },
-      unlockBadge: (badgeType, name, description, icon) => get().earnBadge(badgeType, name, description, icon),
+      unlockBadge: (name, description, icon) => get().earnBadge(name, description, icon),
 
       toasts: [],
       pushToast: (message, kind = 'error', action?, timeoutMs = 4000) => {

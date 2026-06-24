@@ -2,13 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Code, Envelope, Calendar, PencilSimple, Gear, Briefcase, BookOpen,
   Lightbulb, Headphones, Palette, Users, ChartBar, Coffee,
-  Globe, Lightning, Target, Stack, X, Plus
+  Globe, Lightning, Target, Stack, Plus
 } from '@phosphor-icons/react';
 import { useFlowrStore } from '../../store';
 import type { ContextZone } from '../../types';
+import { Dialog, DialogContent } from '../ui/dialog';
 
 /* ─── Types ─────────────────────────────────────────── */
 interface Props {
+  open: boolean;
   onClose: () => void;
   zone?: ContextZone;
 }
@@ -45,7 +47,7 @@ const COLORS: { value: string; label: string; hex: string }[] = [
 ];
 
 /* ─── Component ──────────────────────────────────────── */
-export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
+export const CreateZoneModal: React.FC<Props> = ({ open, onClose, zone }) => {
   const addZone = useFlowrStore((s) => s.addZone);
   const updateZone = useFlowrStore((s) => s.updateZone);
 
@@ -58,16 +60,12 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
 
   const nameRef = useRef<HTMLInputElement>(null);
 
-  /* ESC to close */
+  /* Focus name input when dialog opens */
   useEffect(() => {
-    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handle);
-    return () => window.removeEventListener('keydown', handle);
-  }, [onClose]);
-
-  useEffect(() => {
-    setTimeout(() => nameRef.current?.focus(), 0);
-  }, []);
+    if (open) {
+      setTimeout(() => nameRef.current?.focus(), 50);
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,22 +82,22 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
     onClose();
   };
 
-  const selectedColor = COLORS.find((c) => c.value === color)!;
+  const selectedColor = COLORS.find((c) => c.value === color) ?? COLORS[0];
 
   return (
-    /* Backdrop */
-    <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      {/* Panel */}
-      <div
-        className="bg-muted/90 backdrop-blur-md border border-border rounded-xl p-6 w-96 shadow-2xl"
-        style={{ animation: 'slideUpModal 0.22s cubic-bezier(.22,1,.36,1)' }}
-      >
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (nextOpen) {
+        setName(zone?.name ?? '');
+        setDesc(zone?.description ?? '');
+        setColor(zone?.color ?? 'emerald');
+        setIcon(zone?.icon ?? 'Code');
+      }
+      if (!nextOpen) onClose();
+    }}>
+      <DialogContent className="p-0 overflow-visible max-w-sm">
         {/* Accent stripe */}
         <div
-          className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+          className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl z-10"
           style={{ background: selectedColor.hex, opacity: 0.85 }}
         />
 
@@ -122,12 +120,6 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
               <p className="text-[11px] text-muted-foreground mt-0.5">{isEditing ? 'Update this cognitive workspace' : 'Define a cognitive workspace'}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors"
-          >
-            <X size={16} />
-          </button>
         </div>
 
         {/* Form */}
@@ -146,7 +138,7 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
               placeholder="e.g. Deep Research, Design Sprint…"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-muted/60 border border-border focus:border-primary/50 rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none transition-colors"
+              className="bg-white/5 border border-white/10 focus:border-accent/50 rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none transition-colors"
             />
           </div>
 
@@ -161,7 +153,7 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
               placeholder="What type of cognitive work belongs here?"
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              className="bg-muted/60 border border-border focus:border-primary/50 rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none resize-none transition-colors leading-relaxed"
+              className="bg-white/5 border border-white/10 focus:border-accent/50 rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder-muted-foreground/70 focus:outline-none resize-none transition-colors leading-relaxed"
             />
           </div>
 
@@ -234,29 +226,21 @@ export const CreateZoneModal: React.FC<Props> = ({ onClose, zone }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground rounded-xl hover:bg-muted/50 transition-colors"
+              className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!name.trim() || isSubmitting}
-              className="flex items-center gap-1.5 px-5 py-2 text-xs font-extrabold rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 shadow-lg"
+              className="flex items-center gap-1.5 px-5 py-2 text-xs font-extrabold rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 bg-accent text-accent-foreground hover:bg-accent/90 hover:scale-105 shadow-lg"
             >
               <Plus size={14} />
               <span>{isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Zone'}</span>
             </button>
           </div>
         </form>
-      </div>
-
-      {/* Modal slide-up keyframe */}
-      <style>{`
-        @keyframes slideUpModal {
-          from { opacity: 0; transform: translateY(20px) scale(0.96); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}</style>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

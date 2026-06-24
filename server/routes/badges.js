@@ -1,46 +1,36 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { getAll, unlock } from '../models/badge.js';
+import { getAllBadges, getUserBadges, checkAndAward } from '../models/badge.js';
 
 const router = express.Router();
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const badges = await getAll(req.user.id);
+    const badges = await getAllBadges();
     res.json(badges);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch badges' });
+    console.warn('[DB Fallback] GET /badges — returning empty array:', err.message);
+    res.json([]);
   }
 });
 
 router.get('/user', authenticateToken, async (req, res) => {
   try {
-    const badges = await getAll(req.user.id);
+    const badges = await getUserBadges(req.user.id);
     res.json(badges);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch user badges' });
+    console.warn('[DB Fallback] GET /badges/user — returning empty array:', err.message);
+    res.json([]);
   }
 });
 
-router.post('/unlock', authenticateToken, async (req, res) => {
-  const { badgeType, name, description, icon } = req.body;
-
-  if (!badgeType || !name || !description || !icon) {
-    return res.status(400).json({ error: 'All badge fields are required' });
-  }
-
+router.post('/check', authenticateToken, async (req, res) => {
   try {
-    const badgeId = req.body.id || `bdg-${Date.now()}`;
-    const newBadge = await unlock(badgeId, badgeType, name, description, icon, req.user.id);
-    if (!newBadge) {
-      return res.status(400).json({ error: 'Badge already unlocked' });
-    }
-    res.status(201).json(newBadge);
+    const awards = await checkAndAward(req.user.id);
+    res.json({ awards });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to unlock badge' });
+    console.warn('[DB Fallback] POST /badges/check — returning empty awards:', err.message);
+    res.json({ awards: [] });
   }
 });
 

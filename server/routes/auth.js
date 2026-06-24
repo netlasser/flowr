@@ -1,6 +1,7 @@
 import express from 'express';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { findById, create } from '../models/user.js';
+import { queryWithTimeout } from '../db-guard.js';
 
 const router = express.Router();
 
@@ -9,30 +10,24 @@ const JWKS = createRemoteJWKSet(
   new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
 );
 
+const GUEST_UUID = '00000000-0000-0000-0000-000000000000';
+
 function staticGuest() {
   return {
-    id: 'guest-user',
+    id: GUEST_UUID,
     email: 'flowr-focus@deepmind.com',
     name: 'Focus Builder',
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }
 
-function queryWithTimeout(promise, ms) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error('DB query timed out')), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
-
-// Legacy guest session (for prototyping) — DB-independent fallback
 router.post('/guest', async (req, res) => {
   try {
-    let guest = await queryWithTimeout(findById('guest-user'), 3000);
+    let guest = await queryWithTimeout(findById(GUEST_UUID), 3000);
     if (!guest) {
-      await queryWithTimeout(create('guest-user', 'flowr-focus@deepmind.com', 'Focus Builder', ''), 3000);
-      guest = await queryWithTimeout(findById('guest-user'), 3000);
+      await queryWithTimeout(create(GUEST_UUID, 'flowr-focus@deepmind.com', 'Focus Builder'), 3000);
+      guest = await queryWithTimeout(findById(GUEST_UUID), 3000);
     }
     res.json({
       user: {
@@ -40,6 +35,7 @@ router.post('/guest', async (req, res) => {
         email: guest.email,
         name: guest.name,
         createdAt: guest.created_at,
+        updatedAt: guest.updated_at,
       },
       token: 'guest-token',
     });
@@ -52,7 +48,6 @@ router.post('/guest', async (req, res) => {
   }
 });
 
-// Exchange a Supabase JWT for a local session
 router.post('/supabase', async (req, res) => {
   const { token } = req.body;
   if (!token) {
@@ -70,7 +65,7 @@ router.post('/supabase', async (req, res) => {
 
     let user = await queryWithTimeout(findById(supabaseUserId), 5000);
     if (!user) {
-      await queryWithTimeout(create(supabaseUserId, email, name, ''), 5000);
+      await queryWithTimeout(create(supabaseUserId, email, name), 5000);
       user = await queryWithTimeout(findById(supabaseUserId), 5000);
     }
 
@@ -80,6 +75,7 @@ router.post('/supabase', async (req, res) => {
         email: user.email,
         name: user.name,
         createdAt: user.created_at,
+        updatedAt: user.updated_at,
       },
       token,
     });

@@ -1,17 +1,16 @@
-import { useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShieldWarning, Compass, TrendUp, Cpu, Trophy, SignOut } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ShieldWarning, Compass, TrendUp, Cpu, Trophy, SignOut, ArrowClockwise } from '@phosphor-icons/react';
 import { useFlowrStore } from '../store';
 import { ZoneBoard } from './zone/ZoneBoard';
 import { FlowGuardian } from './zone/FlowGuardian';
 import { TransitionBuffer } from './zone/TransitionBuffer';
 import { WhiplashAnalytics } from './dashboard/WhiplashAnalytics';
 import { api, setApiToken } from '../services/api';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 
 export function AppShell() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const activeTab = location.pathname.startsWith('/app/analytics') ? 'analytics' : 'board';
 
   const isGuardianActive = useFlowrStore((state) => state.isGuardianActive);
   const isBufferActive = useFlowrStore((state) => state.isBufferActive);
@@ -22,6 +21,9 @@ export function AppShell() {
   const hasHydratedFromBackend = useFlowrStore((state) => state.hasHydratedFromBackend);
   const pushToast = useFlowrStore((state) => state.pushToast);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
   const totalSwitches = switches.length;
   const timeLostMinutes = totalSwitches * 15;
   const isWarning = totalSwitches >= 3;
@@ -30,10 +32,13 @@ export function AppShell() {
     let cancelled = false;
 
     const bootstrap = async () => {
+      setLoadError(null);
       try {
+        console.log('[AppShell] Bootstrapping session...');
         const guest = await api.guestSession();
         if (cancelled) return;
 
+        console.log('[AppShell] Guest session OK:', guest.user?.name);
         setApiToken(guest.token);
         const [zones, tasks, switchesToday, badges] = await Promise.all([
           api.getZones(),
@@ -51,10 +56,12 @@ export function AppShell() {
           switches: switchesToday,
           badges,
         });
+        console.log('[AppShell] Hydration complete');
       } catch (error) {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : 'Failed to initialize FLOWR';
-          pushToast(message, 'error');
+          console.error('[AppShell] Bootstrap failed:', error);
+          setLoadError(message);
 
           const state = useFlowrStore.getState();
           hydrateFromBackend({
@@ -70,6 +77,7 @@ export function AppShell() {
             switches: state.switches,
             badges: state.badges,
           });
+          console.log('[AppShell] Hydrated with fallback data due to:', message);
         }
       }
     };
@@ -79,14 +87,38 @@ export function AppShell() {
     return () => {
       cancelled = true;
     };
-  }, [hydrateFromBackend, pushToast]);
+  }, [hydrateFromBackend, pushToast, retryKey]);
 
   if (!hasHydratedFromBackend) {
+    if (loadError) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+          <div className="flex flex-col items-center gap-4 max-w-sm text-center px-4">
+            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-rose-400">
+              <ShieldWarning size={28} />
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">FLOWR</p>
+              <h1 className="m-0 text-lg font-black tracking-tight mt-1">Connection failed</h1>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{loadError}</p>
+            </div>
+            <button
+              onClick={() => setRetryKey((k) => k + 1)}
+              className="mt-2 flex items-center gap-2 bg-accent text-accent-foreground rounded-full px-6 py-2.5 text-sm font-bold hover:bg-accent/90 hover:scale-105 transition-all shadow-lg active:scale-[0.98]"
+            >
+              <ArrowClockwise size={14} />
+              <span>Retry</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-4">
           <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-primary">
-            <Cpu size={28} />
+            <Cpu size={28} className="animate-pulse" />
           </div>
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">FLOWR</p>
@@ -119,40 +151,24 @@ export function AppShell() {
           </div>
         </div>
 
-        <nav aria-label="Main navigation" className="flex items-center rounded-xl border border-border bg-muted/40 p-1">
-            <Link
-              id="tab-board"
-              to="/app"
-              className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all duration-200 ${
-                activeTab === 'board'
-                  ? 'text-foreground border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-primary'
-              }`}
-            >
+        <Tabs value={document.location.pathname.startsWith('/app/analytics') ? 'analytics' : 'board'} onValueChange={(v) => navigate(v === 'analytics' ? '/app/analytics' : '/app')}>
+          <TabsList>
+            <TabsTrigger value="board" id="tab-board">
               <Compass size={14} />
               <span>My Board</span>
-            </Link>
-
-            <Link
-              id="tab-analytics"
-              to="/app/analytics"
-              className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all duration-200 ${
-                activeTab === 'analytics'
-                  ? 'text-foreground border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-primary'
-              }`}
-            >
-            <TrendUp size={14} />
-            <span>Whiplash Analytics</span>
-
-            {isWarning && (
-              <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5" aria-label="Warning: high switch count">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-whiplash-500 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-whiplash-500" />
-              </span>
-            )}
-          </Link>
-        </nav>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" id="tab-analytics">
+              <TrendUp size={14} />
+              <span>Whiplash Analytics</span>
+              {isWarning && (
+                <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5" aria-label="Warning: high switch count">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-whiplash-500 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-whiplash-500" />
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         <div className="hidden items-center gap-3 md:flex">
           <div
@@ -180,7 +196,7 @@ export function AppShell() {
       </header>
 
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-6">
-        {activeTab === 'board' ? <ZoneBoard /> : <WhiplashAnalytics />}
+        {document.location.pathname.startsWith('/app/analytics') ? <WhiplashAnalytics /> : <ZoneBoard />}
       </main>
 
       <footer className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 border-t border-border bg-background/60 px-6 py-4 md:flex-row">

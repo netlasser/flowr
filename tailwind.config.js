@@ -6,18 +6,20 @@ export default {
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        'muted-foreground': 'hsl(var(--muted-foreground))',
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        gray: 'hsl(var(--gray))',
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
         },
         border: 'hsl(var(--border))',
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        brand: {
-          400: '#34d399',
-          500: '#10b981',
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         whiplash: {
           500: '#ef4444',
@@ -26,10 +28,6 @@ export default {
         buffer: {
           500: '#f59e0b',
           600: '#d97706',
-        },
-        dark: {
-          900: '#0f172a',
-          950: '#020617',
         },
       },
       fontFamily: {

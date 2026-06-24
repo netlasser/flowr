@@ -15,6 +15,9 @@ import sessionsRouter from './routes/sessions.js';
 import analyticsRouter from './routes/analytics.js';
 import aiRouter from './routes/ai.js';
 
+// DB health check at startup
+import { checkDbAvailability } from './db-guard.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -62,13 +65,23 @@ Sentry.setupExpressErrorHandler(app);
 
 // Global Error Catch Handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled Server Exception:', err);
-  res.status(500).json({ error: 'Internal server safety error triggered' });
+  const isDev = process.env.NODE_ENV === 'development';
+  console.error('[Unhandled Error]', err.message);
+  if (isDev) console.error(err.stack);
+  res.status(500).json({
+    error: err.message || 'Internal server error',
+    ...(isDev ? { stack: err.stack } : {}),
+  });
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`===============================================`);
-  console.log(`    FLOWR Backend running at: http://localhost:${PORT}`);
-  console.log(`===============================================`);
-});
+// Run DB health check after server starts
+if (!process.env.VITEST) {
+  app.listen(PORT, async () => {
+    console.log(`===============================================`);
+    console.log(`    FLOWR Backend running at: http://localhost:${PORT}`);
+    console.log(`===============================================`);
+    await checkDbAvailability();
+  });
+}
+
+export default app;

@@ -43,7 +43,7 @@ export const WhiplashAnalytics: React.FC = () => {
   const analytics = useFlowrStore((state) => state.analytics);
 
   const totalSwitches = analytics?.todaySwitches ?? switches.length;
-  const totalSecondsLost = analytics?.totalSecondsLost ?? switches.reduce((acc, curr) => acc + curr.estimatedTimeLostSeconds, 0);
+  const totalSecondsLost = switches.length * 900;
   const focusStreak = analytics?.longestStreakMinutes ?? 0;
 
   const formatSecondsToText = (secs: number) => {
@@ -55,10 +55,14 @@ export const WhiplashAnalytics: React.FC = () => {
     return `${hours}h ${minutes}m`;
   };
 
-  // Determine unlocked status
-  const isBadgeUnlocked = (type: string) => {
-    return badges.some((b) => b.badgeType === type);
+  const isBadgeUnlocked = (name: string) => {
+    return badges.some((b) => b.name === name);
   };
+
+  const NAMED_COLORS = new Set(['emerald', 'blue', 'purple', 'rose', 'amber', 'cyan']);
+
+  const zoneColor = (color: string | undefined | null) =>
+    color && NAMED_COLORS.has(color) ? `bg-${color}-500` : 'bg-purple-500';
 
   // Zone distribution
   const zoneDistribution = analytics?.zoneDistribution?.length
@@ -66,7 +70,7 @@ export const WhiplashAnalytics: React.FC = () => {
     : zones.map((zone) => ({
         label: zone.name,
         count: tasks.filter((t) => t.zoneId === zone.id).length,
-        color: `bg-${zone.color}-500`,
+        color: zoneColor(zone.color),
       }));
   return (
     <div className="flex-1 flex flex-col gap-6 overflow-hidden">
@@ -170,8 +174,8 @@ export const WhiplashAnalytics: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {ALL_POSSIBLE_BADGES.map((badgeOpt) => {
-              const unlocked = isBadgeUnlocked(badgeOpt.type);
-              const storeBadge = badges.find(b => b.badgeType === badgeOpt.type);
+              const unlocked = isBadgeUnlocked(badgeOpt.name);
+              const storeBadge = badges.find(b => b.name === badgeOpt.name);
               
               return (
                 <div

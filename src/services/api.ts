@@ -57,7 +57,6 @@ export interface BackendBootstrap {
 export interface AnalyticsSummary {
   totalSwitches: number;
   todaySwitches: number;
-  totalSecondsLost: number;
   longestStreakMinutes: number;
   zoneDistribution: { label: string; color: string; count: number }[];
   focusTimePerZone: Record<string, number>;
@@ -116,7 +115,7 @@ export const api = {
   },
 
   toggleTask(id: string) {
-    return requestJson<{ id: string; completed: boolean; completedAt: string | null }>(`/tasks/${id}/toggle`, {
+    return requestJson<{ id: string; completed: boolean; updatedAt: string }>(`/tasks/${id}/toggle`, {
       method: 'PATCH',
     });
   },
@@ -142,19 +141,22 @@ export const api = {
   addSwitch(switchEvent: Partial<SwitchEvent> & { id: string; toZoneId: string }) {
     return requestJson<SwitchEvent>('/switches', {
       method: 'POST',
-      body: JSON.stringify(switchEvent),
+      body: JSON.stringify({ fromZoneId: switchEvent.fromZoneId, toZoneId: switchEvent.toZoneId }),
     });
   },
 
   // ── Badges ────────────────────────────────────────────
+  getBadges() {
+    return requestJson<UserBadge[]>('/badges');
+  },
+
   getBadgesUser() {
     return requestJson<UserBadge[]>('/badges/user');
   },
 
-  earnBadge(badge: Partial<UserBadge> & { id: string; badgeType: string; name: string; description: string; icon: string }) {
-    return requestJson<UserBadge>('/badges/unlock', {
+  checkBadges() {
+    return requestJson<{ awards: UserBadge[] }>('/badges/check', {
       method: 'POST',
-      body: JSON.stringify(badge),
     });
   },
 
@@ -170,10 +172,10 @@ export const api = {
     });
   },
 
-  endSession(id: string, durationSeconds: number, tasksCompletedCount: number, completed: boolean) {
-    return requestJson<FocusSession>(`/sessions/${id}/end`, {
-      method: 'PATCH',
-      body: JSON.stringify({ durationSeconds, tasksCompletedCount, completed }),
+  endSession(id: string, durationSeconds: number, completed: boolean) {
+    return requestJson<FocusSession>(`/sessions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ durationSeconds, completed }),
     });
   },
 

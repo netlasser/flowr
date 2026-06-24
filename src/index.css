@@ -1,19 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0C0C0C;
-  --color-foreground: #fff;
-  --color-muted: #1a1a1a;
-  --color-muted-foreground: #a8a8ae;
-  --color-border: #2e2e2e;
-  --color-primary: #FFB000;
-  --color-primary-foreground: #0a0a0a;
-  --color-brand-400: #FFB000;
-  --color-brand-500: #e6a000;
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-gray: hsl(var(--gray));
+  --color-muted: hsl(0 0% 4%);
+  --color-border: hsl(0 0% 12%);
+  --color-primary: hsl(var(--accent));
+  --color-primary-foreground: hsl(var(--accent-foreground));
   --color-whiplash-500: #ef4444;
   --color-whiplash-600: #dc2626;
-  --color-buffer-500: #FFB000;
-  --color-buffer-600: #e6a000;
+  --color-buffer-500: #f59e0b;
+  --color-buffer-600: #d97706;
   --font-display: 'Instrument Serif', serif;
   --font-body: 'Inter', sans-serif;
   --animate-fade-in: fade-in 0.2s ease-out;
@@ -23,16 +24,14 @@
 }
 
 :root {
-  --background: 0 0% 5%;
+  --background: 0 0% 5%;        /* #0E0C0C */
   --foreground: 0 0% 100%;
-  --muted-foreground: 0 0% 65%;
-  --primary: 45 100% 50%;
-  --primary-foreground: 0 0% 5%;
-  --secondary: 0 0% 10%;
-  --muted: 0 0% 12%;
-  --accent: 45 100% 50%;
-  --border: 0 0% 18%;
-  --input: 0 0% 18%;
+  --muted-foreground: 0 0% 63%;  /* #A0A0A0 */
+  --accent: 45 100% 50%;         /* #FFB000 */
+  --accent-foreground: 0 0% 5%;
+  --gray: 0 5% 32%;              /* #525151 */
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.06);
   --font-display: 'Instrument Serif', serif;
   --font-body: 'Inter', sans-serif;
 }
@@ -66,10 +65,11 @@ body {
     pointer-events: none;
   }
   .glass-card {
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(8px);
-    border: 1px solid hsl(var(--border));
-    border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   }
   .animate-fade-rise {
     animation: fade-rise 0.8s ease-out both;

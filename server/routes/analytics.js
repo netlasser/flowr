@@ -8,28 +8,23 @@ router.get('/summary', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Run all aggregation queries in parallel
     const [switchesResult, todayResult, streakResult, zoneDistResult, sessionsResult] =
       await Promise.all([
-        // Total switches count + total time lost
         db.query(
-          `SELECT COUNT(*)::int AS total_switches,
-                  COALESCE(SUM(estimated_time_lost_seconds), 0)::int AS total_seconds_lost
+          `SELECT COUNT(*)::int AS total_switches
            FROM switches WHERE user_id = $1`,
           [userId]
         ),
 
-        // Today's switches count
         db.query(
           `SELECT COUNT(*)::int AS today_switches
            FROM switches
            WHERE user_id = $1
-             AND timestamp >= CURRENT_DATE
-             AND timestamp < CURRENT_DATE + INTERVAL '1 day'`,
+             AND "timestamp" >= CURRENT_DATE
+             AND "timestamp" < CURRENT_DATE + INTERVAL '1 day'`,
           [userId]
         ),
 
-        // Longest focus streak (from focus_sessions)
         db.query(
           `SELECT COALESCE(MAX(duration_seconds), 0)::int AS longest_streak_seconds
            FROM focus_sessions
@@ -37,7 +32,6 @@ router.get('/summary', authenticateToken, async (req, res) => {
           [userId]
         ),
 
-        // Task count per zone
         db.query(
           `SELECT z.name, z.color, COUNT(t.id)::int AS count
            FROM zones z
@@ -48,7 +42,6 @@ router.get('/summary', authenticateToken, async (req, res) => {
           [userId]
         ),
 
-        // Focus time per zone
         db.query(
           `SELECT zone_id,
                   COALESCE(SUM(duration_seconds), 0)::int AS total_seconds
@@ -60,7 +53,6 @@ router.get('/summary', authenticateToken, async (req, res) => {
       ]);
 
     const totalSwitches = switchesResult.rows[0]?.total_switches || 0;
-    const totalSecondsLost = switchesResult.rows[0]?.total_seconds_lost || 0;
     const todaySwitches = todayResult.rows[0]?.today_switches || 0;
     const longestStreakSeconds = streakResult.rows[0]?.longest_streak_seconds || 0;
 
@@ -78,14 +70,19 @@ router.get('/summary', authenticateToken, async (req, res) => {
     res.json({
       totalSwitches,
       todaySwitches,
-      totalSecondsLost,
       longestStreakMinutes: Math.round(longestStreakSeconds / 60),
       zoneDistribution,
       focusTimePerZone,
     });
   } catch (err) {
-    console.error('Analytics summary error:', err);
-    res.status(500).json({ error: 'Failed to compute analytics' });
+    console.warn('[DB Fallback] GET /analytics/summary — returning empty analytics:', err.message);
+    res.json({
+      totalSwitches: 0,
+      todaySwitches: 0,
+      longestStreakMinutes: 0,
+      zoneDistribution: [],
+      focusTimePerZone: {},
+    });
   }
 });
 
@@ -102,8 +99,8 @@ router.get('/avg-focus-duration', authenticateToken, async (req, res) => {
 
     res.json({ avgDurationMinutes: rows[0]?.avg_duration || 25 });
   } catch (err) {
-    console.error('Avg focus duration error:', err);
-    res.status(500).json({ error: 'Failed to compute average focus duration' });
+    console.warn('[DB Fallback] GET /analytics/avg-focus-duration — returning default:', err.message);
+    res.json({ avgDurationMinutes: 25 });
   }
 });
 
@@ -111,10 +108,8 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Run analysis queries in parallel
     const [hourlyResult, switchPatternResult, zoneDurationResult] =
       await Promise.all([
-        // Peak focus hours (hour with most completed focus sessions)
         db.query(
           `SELECT EXTRACT(HOUR FROM start_time)::int AS hour,
                   COUNT(*)::int AS session_count
@@ -127,12 +122,11 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
           [userId]
         ),
 
-        // Most common switch pattern (from_zone -> to_zone)
         db.query(
           `SELECT s.from_zone_id, s.to_zone_id, COUNT(*)::int AS count
            FROM switches s
            WHERE s.user_id = $1
-             AND s.timestamp >= NOW() - INTERVAL '7 days'
+             AND s."timestamp" >= NOW() - INTERVAL '7 days'
              AND s.from_zone_id IS NOT NULL
            GROUP BY s.from_zone_id, s.to_zone_id
            ORDER BY count DESC
@@ -140,7 +134,6 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
           [userId]
         ),
 
-        // Total focus time per zone
         db.query(
           `SELECT zone_id, SUM(duration_seconds)::int AS total_seconds
            FROM focus_sessions
@@ -152,7 +145,6 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
         ),
       ]);
 
-    // Fetch zone names
     const { rows: zones } = await db.query(
       'SELECT id, name FROM zones WHERE user_id = $1',
       [userId]
@@ -161,7 +153,6 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
 
     const recommendations = [];
 
-    // Peak hours recommendation
     if (hourlyResult.rows.length > 0) {
       const peakHour = hourlyResult.rows[0].hour;
       const nextHour = (peakHour + 2) % 24;
@@ -179,7 +170,6 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
       });
     }
 
-    // Switch pattern recommendation
     if (switchPatternResult.rows.length > 0) {
       const topSwitch = switchPatternResult.rows[0];
       const fromName = zoneMap[topSwitch.from_zone_id] || 'Unknown';
@@ -192,7 +182,6 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
       });
     }
 
-    // Most focused zone recommendation
     if (zoneDurationResult.rows.length > 0) {
       const topZone = zoneDurationResult.rows[0];
       const zoneName = zoneMap[topZone.zone_id] || 'Unknown';
@@ -204,7 +193,6 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
       });
     }
 
-    // General recommendation if none
     if (recommendations.length === 0) {
       recommendations.push({
         id: 'get-started',
@@ -215,8 +203,8 @@ router.get('/recommendations', authenticateToken, async (req, res) => {
 
     res.json(recommendations);
   } catch (err) {
-    console.error('Recommendations error:', err);
-    res.status(500).json({ error: 'Failed to compute recommendations' });
+    console.warn('[DB Fallback] GET /analytics/recommendations — returning empty:', err.message);
+    res.json([]);
   }
 });
 

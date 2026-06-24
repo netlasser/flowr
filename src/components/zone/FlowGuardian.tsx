@@ -1,10 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useFlowrStore } from '../../store';
-import { api } from '../../services/api';
 import {
   Play, Pause, SignOut, Shield, CheckCircle, Clock,
   Star, Timer, Hourglass,
 } from '@phosphor-icons/react';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '../ui/alert-dialog';
 
 /* ─── Helpers ─────────────────────────────────────── */
 const formatTime = (secs: number) => {
@@ -65,7 +73,6 @@ export const FlowGuardian: React.FC = () => {
   const pomodoroDurationMinutes = useFlowrStore((s) => s.pomodoroDurationMinutes);
 
   /* ─── Local state ─── */
-  const [showExitModal, setShowExitModal] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [countUpSeconds, setCountUpSeconds] = useState(0);
   const [readinessRating, setReadinessRating] = useState(0);
@@ -73,6 +80,11 @@ export const FlowGuardian: React.FC = () => {
   const activeZone = zones.find((z) => z.id === activeZoneId);
   const zoneTasks = tasks.filter((t) => t.zoneId === activeZoneId && !t.completed);
   const completedZoneTasks = tasks.filter((t) => t.zoneId === activeZoneId && t.completed);
+
+  /* ─── When intention phase starts, default to recommended preset ─── */
+  const displayDuration = focusPhase === 'intention' && selectedDuration === null
+    ? recommendedPreset
+    : selectedDuration;
 
   /* ─── Duration options derived from recommendedPreset ─── */
   const durationOptions = useMemo(() => {
@@ -94,13 +106,6 @@ export const FlowGuardian: React.FC = () => {
       fetchAvgFocusDuration();
     }
   }, [focusPhase, fetchAvgFocusDuration]);
-
-  /* ─── Pre-select recommendedPreset when intention phase opens ─── */
-  useEffect(() => {
-    if (focusPhase === 'intention' && selectedDuration === null) {
-      setSelectedDuration(recommendedPreset);
-    }
-  }, [focusPhase, recommendedPreset, selectedDuration]);
 
   /* ─── Timer tick ─── */
   useEffect(() => {
@@ -164,7 +169,7 @@ export const FlowGuardian: React.FC = () => {
             </h3>
             <div className="grid grid-cols-2 gap-3">
               {durationOptions.map((opt) => {
-                const isSelected = selectedDuration === opt.value;
+                const isSelected = displayDuration === opt.value;
                 return (
                   <button
                     key={opt.label}
@@ -194,11 +199,11 @@ export const FlowGuardian: React.FC = () => {
 
           {/* Start button */}
           <button
-            disabled={selectedDuration === null}
+            disabled={displayDuration === null}
             onClick={() => {
-              if (selectedDuration === null) return;
-              const mode = selectedDuration === 0 ? 'count-up' : 'pomodoro';
-              confirmFocus(mode, selectedDuration);
+              if (displayDuration === null) return;
+              const mode = displayDuration === 0 ? 'count-up' : 'pomodoro';
+              confirmFocus(mode, displayDuration);
             }}
             className="bg-primary text-primary-foreground rounded-full px-10 py-3 text-sm font-bold hover:bg-primary/90 hover:scale-105 transition-all shadow-lg active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
@@ -357,76 +362,69 @@ export const FlowGuardian: React.FC = () => {
         </div>
 
         {/* ── Exit button ── */}
-        <button
-          onClick={() => setShowExitModal(true)}
-          className="border border-border bg-muted/70 text-foreground rounded-full px-6 py-3 text-sm fixed bottom-6 right-6 flex items-center gap-2 hover:bg-muted hover:text-primary hover:scale-105 active:scale-95 transition-all"
-        >
-          <SignOut className="w-4 h-4" />
-          <span>Exit Focus Zone</span>
-        </button>
-
-        {/* ── 3-Option Exit Modal ── */}
-        {showExitModal && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-            <div className="bg-muted/90 border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slide-up">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
-                  <Hourglass size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-foreground">Leaving your focus zone?</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Exiting now costs ~15 minutes of refocus time.
-                  </p>
-                </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              className="border border-border bg-muted/70 text-foreground rounded-full px-6 py-3 text-sm fixed bottom-6 right-6 flex items-center gap-2 hover:bg-muted hover:text-primary hover:scale-105 active:scale-95 transition-all"
+            >
+              <SignOut className="w-4 h-4" />
+              <span>Exit Focus Zone</span>
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                <Hourglass size={20} />
               </div>
-
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 mb-5 text-center">
-                <p className="text-xs font-bold text-amber-500">
-                  Stay 5 more minutes to complete a full cycle?
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Every interruption fragments your cognitive momentum.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    setShowExitModal(false);
-                    incrementSwitchesAvoided();
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors active:scale-[0.99]"
-                >
-                  Stay in focus
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowExitModal(false);
-                    incrementSwitchesAvoided();
-                    if (timerMode === 'pomodoro') {
-                      extendFocus(5);
-                    }
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-border text-foreground text-xs font-bold hover:bg-muted/80 transition-colors active:scale-[0.99]"
-                >
-                  Add 5 more minutes
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowExitModal(false);
-                    useFlowrStore.setState({ focusPhase: 'celebration', isTimerRunning: false });
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl text-muted-foreground text-xs font-medium hover:text-foreground transition-colors active:scale-[0.99]"
-                >
-                  Leave anyway
-                </button>
+              <div>
+                <AlertDialogTitle className="text-sm font-extrabold text-foreground">Leaving your focus zone?</AlertDialogTitle>
+                <AlertDialogDescription className="text-[11px] text-muted-foreground mt-0.5">
+                  Exiting now costs ~15 minutes of refocus time.
+                </AlertDialogDescription>
               </div>
             </div>
-          </div>
-        )}
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 mb-5 text-center">
+              <p className="text-xs font-bold text-amber-500">
+                Stay 5 more minutes to complete a full cycle?
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Every interruption fragments your cognitive momentum.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <AlertDialogAction
+                onClick={() => {
+                  incrementSwitchesAvoided();
+                }}
+              >
+                Stay in focus
+              </AlertDialogAction>
+
+              <AlertDialogAction
+                onClick={() => {
+                  incrementSwitchesAvoided();
+                  if (timerMode === 'pomodoro') {
+                    extendFocus(5);
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl border border-border text-foreground text-xs font-bold hover:bg-muted/80 transition-colors active:scale-[0.99]"
+              >
+                Add 5 more minutes
+              </AlertDialogAction>
+
+              <AlertDialogCancel
+                onClick={() => {
+                  useFlowrStore.setState({ focusPhase: 'celebration', isTimerRunning: false });
+                }}
+                className="w-full py-2.5 px-4 rounded-xl text-muted-foreground text-xs font-medium hover:text-foreground transition-colors active:scale-[0.99]"
+              >
+                Leave anyway
+              </AlertDialogCancel>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }

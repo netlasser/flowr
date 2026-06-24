@@ -1,7 +1,7 @@
 import db from '../db.js';
 
 export const getAll = async (userId) => {
-  const { rows } = await db.query('SELECT * FROM tasks WHERE user_id = $1', [userId]);
+  const { rows } = await db.query('SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at ASC', [userId]);
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -9,18 +9,20 @@ export const getAll = async (userId) => {
     completed: r.completed,
     zoneId: r.zone_id,
     userId: r.user_id,
+    dueDate: r.due_date,
     createdAt: r.created_at,
-    completedAt: r.completed_at,
+    updatedAt: r.updated_at,
   }));
 };
 
-export const create = async (id, title, description, zoneId, userId) => {
+export const create = async (id, title, description, zoneId, userId, dueDate) => {
+  const now = new Date().toISOString();
   await db.query(
-    `INSERT INTO tasks (id, title, description, completed, zone_id, user_id, created_at, completed_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [id, title, description, false, zoneId, userId, new Date().toISOString(), null]
+    `INSERT INTO tasks (id, title, description, completed, zone_id, user_id, due_date, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [id, title, description, false, zoneId, userId, dueDate || null, now, now]
   );
-  return { id, title, description, completed: false, zoneId, userId, createdAt: new Date().toISOString() };
+  return { id, title, description, completed: false, zoneId, userId, dueDate: dueDate || null, createdAt: now, updatedAt: now };
 };
 
 export const toggle = async (id, userId) => {
@@ -32,14 +34,14 @@ export const toggle = async (id, userId) => {
 
   const task = rows[0];
   const nextVal = !task.completed;
-  const completedAt = nextVal ? new Date().toISOString() : null;
+  const now = new Date().toISOString();
 
   await db.query(
-    'UPDATE tasks SET completed = $1, completed_at = $2 WHERE id = $3 AND user_id = $4',
-    [nextVal, completedAt, id, userId]
+    'UPDATE tasks SET completed = $1, updated_at = $2 WHERE id = $3 AND user_id = $4',
+    [nextVal, now, id, userId]
   );
 
-  return { id, completed: nextVal, completedAt };
+  return { id, completed: nextVal, updatedAt: now };
 };
 
 export const findById = async (id, userId) => {
@@ -53,17 +55,19 @@ export const findById = async (id, userId) => {
     completed: r.completed,
     zoneId: r.zone_id,
     userId: r.user_id,
+    dueDate: r.due_date,
     createdAt: r.created_at,
-    completedAt: r.completed_at,
+    updatedAt: r.updated_at,
   };
 };
 
 export const move = async (id, targetZoneId, userId) => {
+  const now = new Date().toISOString();
   await db.query(
-    'UPDATE tasks SET zone_id = $1 WHERE id = $2 AND user_id = $3',
-    [targetZoneId, id, userId]
+    'UPDATE tasks SET zone_id = $1, updated_at = $2 WHERE id = $3 AND user_id = $4',
+    [targetZoneId, now, id, userId]
   );
-  return { id, zoneId: targetZoneId };
+  return { id, zoneId: targetZoneId, updatedAt: now };
 };
 
 export const remove = async (id, userId) => {

@@ -23,3 +23,12 @@ Use Clew (`.clew/`) to track features, progress, and roadmap.
 - `clew done <id>` after code is stable and checks pass.
 - Commit `.clew/` changes **with** every code commit.
 - When reading an increment, use `clew show <id>` to get the full body.
+
+## Commands
+
+| Action | Command |
+|---|---|
+| Run all tests | `npm test` |
+| Watch tests | `npm run test:watch` |
+| Run linter | `npm run lint` |
+| Build | `npm run build` |
