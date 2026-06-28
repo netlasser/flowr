@@ -3,10 +3,10 @@ import type { ContextZone, SwitchEvent, Task, User, UserBadge, FocusSession } fr
 type JsonRecord = Record<string, unknown>;
 
 const API_BASE = '/api';
-let currentToken = 'guest-token';
+let currentToken = '';
 
 export const setApiToken = (token: string | null | undefined) => {
-  currentToken = token || 'guest-token';
+  currentToken = token || '';
 };
 
 export const getApiToken = () => currentToken;
@@ -16,7 +16,7 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
   if (!headers.has('Content-Type') && options.body) {
     headers.set('Content-Type', 'application/json');
   }
-  headers.set('Authorization', `Bearer ${currentToken || 'guest-token'}`);
+  headers.set('Authorization', `Bearer ${currentToken}`);
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -62,18 +62,18 @@ export interface AnalyticsSummary {
   focusTimePerZone: Record<string, number>;
 }
 
+export interface Recommendation {
+  id: string;
+  type: 'timing' | 'switch' | 'focus' | 'general';
+  message: string;
+}
+
 export const api = {
   // ── Auth ──────────────────────────────────────────────
-  async guestSession() {
+  async guestSession(name: string, email: string) {
     return requestJson<{ user: User; token: string }>('/auth/guest', {
       method: 'POST',
-    });
-  },
-
-  async supabaseAuth(token: string) {
-    return requestJson<{ user: User; token: string }>('/auth/supabase', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ name, email }),
     });
   },
 
@@ -124,6 +124,13 @@ export const api = {
     return requestJson<{ id: string; zoneId: string }>(`/tasks/${id}/move`, {
       method: 'PATCH',
       body: JSON.stringify({ zoneId }),
+    });
+  },
+
+  updateTask(id: string, updates: Partial<Pick<Task, 'title' | 'description'>>) {
+    return requestJson<Task>(`/tasks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
     });
   },
 
@@ -189,7 +196,7 @@ export const api = {
   },
 
   getRecommendations() {
-    return requestJson<{ id: string; type: string; message: string; action?: string }[]>('/analytics/recommendations');
+    return requestJson<Recommendation[]>('/analytics/recommendations');
   },
 
   // ── AI ───────────────────────────────────────────────
@@ -203,5 +210,13 @@ export const api = {
   // ── Tasks (extended) ────────────────────────────────
   getUnbatchedTasks() {
     return requestJson<Task[]>('/tasks/unbatched');
+  },
+
+  // ── Beta ─────────────────────────────────────────────
+  submitBetaFeedback(type: 'bug' | 'feature' | 'general', message: string, context?: Record<string, unknown>) {
+    return requestJson<{ id: string; userId: string; type: string; message: string; createdAt: string }>('/beta/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ type, message, context }),
+    });
   },
 };

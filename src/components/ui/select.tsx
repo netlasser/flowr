@@ -29,7 +29,7 @@ export function SelectContent({
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
-        className={`z-50 overflow-hidden rounded-xl bg-[#0E0C0C] border border-white/10 shadow-2xl data-[state=open]:animate-fade-in ${className}`}
+        className={`z-50 overflow-hidden rounded-xl bg-background border border-white/10 shadow-2xl data-[state=open]:animate-fade-in ${className}`}
         {...props}
       >
         <SelectPrimitive.Viewport className="p-1.5">

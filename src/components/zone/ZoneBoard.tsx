@@ -16,36 +16,13 @@ import { useWhiplashAlert } from '../../hooks/useWhiplashAlert';
 import { PlusCircle, Plus, SquaresFour, Stack, WarningCircle, ArrowRight, X, Info } from '@phosphor-icons/react';
 import type { Task } from '../../types';
 
-/* ─── Keyword map for default zones ─────────────────── */
-const DEFAULT_ZONE_KEYWORDS: Record<string, string[]> = {
-  'z-comms': [
-    'email', 'slack', 'chat', 'call', 'sync', 'zoom', 'review',
-    'message', 'dm', 'ping', 'notify', 'meet', 'standup',
-  ],
-  'z-deep-code': [
-    'code', 'bug', 'feature', 'refactor', 'compile', 'database',
-    'sqlite', 'sql', 'api', 'build', 'deploy', 'fix', 'implement',
-    'debug', 'test', 'spec', 'lint',
-  ],
-  'z-admin': [
-    'jira', 'ticket', 'sheet', 'log', 'time', 'plan', 'doc',
-    'schedule', 'report', 'invoice', 'budget', 'meeting', 'agenda',
-    'note', 'track',
-  ],
-};
-
-/* ─── Derive keywords from zone name & description ─── */
-function deriveKeywords(name: string, description: string): string[] {
-  return [...name.split(/\s+/), ...description.split(/\s+/)]
-    .map((w) => w.toLowerCase().replace(/[^a-z0-9]/g, ''))
-    .filter((w) => w.length > 2);
-}
-
 export const ZoneBoard: React.FC = () => {
   const zones   = useFlowrStore((state) => state.zones);
   const tasks   = useFlowrStore((state) => state.tasks);
   const moveTask = useFlowrStore((state) => state.moveTask);
   const addTask  = useFlowrStore((state) => state.addTask);
+  const reorderTasks = useFlowrStore((state) => state.reorderTasks);
+  const getSuggestionForText = useFlowrStore((state) => state.getSuggestionForText);
 
   useWhiplashAlert();
 
@@ -64,7 +41,6 @@ export const ZoneBoard: React.FC = () => {
   // Smart Batching State
   const [smartInput, setSmartInput]         = useState('');
   const [suggestedZoneId, setSuggestedZoneId] = useState<string | null>(null);
-  const [smartTaskTitle, setSmartTaskTitle]  = useState('');
 
   /* Configure sensors */
   const sensors = useSensors(
@@ -85,6 +61,8 @@ export const ZoneBoard: React.FC = () => {
 
     const activeId = active.id as string;
     const overId = over.id as string;
+    const activeTask = tasks.find((t) => t.id === activeId);
+    if (!activeTask) return;
 
     if (zones.some((z) => z.id === overId)) {
       moveTask(activeId, overId);
@@ -92,57 +70,35 @@ export const ZoneBoard: React.FC = () => {
     }
 
     const overTask = tasks.find((t) => t.id === overId);
-    if (overTask && overTask.zoneId !== tasks.find((t) => t.id === activeId)?.zoneId) {
+    if (!overTask) return;
+
+    if (overTask.zoneId === activeTask.zoneId) {
+      const zoneTasks = tasks.filter((t) => t.zoneId === activeTask.zoneId);
+      const oldIdx = zoneTasks.findIndex((t) => t.id === activeId);
+      const newIdx = zoneTasks.findIndex((t) => t.id === overId);
+      if (oldIdx !== -1 && newIdx !== -1) {
+        reorderTasks(activeTask.zoneId, oldIdx, newIdx);
+      }
+    } else {
       moveTask(activeId, overTask.zoneId);
     }
   };
 
-  /* ── Smart Batching: dynamic keyword scoring ────────── */
+  /* ── Smart Batching: unified scoring via store ─────── */
   const handleSmartInputChange = (val: string) => {
     setSmartInput(val);
-    setSmartTaskTitle(val);
-
     if (!val.trim()) {
       setSuggestedZoneId(null);
-      return;
+    } else {
+      setSuggestedZoneId(getSuggestionForText(val));
     }
-
-    const lower = val.toLowerCase();
-
-    /* Score each zone */
-    let bestScore = 0;
-    let bestZoneId: string | null = null;
-
-    zones.forEach((zone) => {
-      let score = 0;
-
-      // Check static keyword map for default zones
-      const staticKws = DEFAULT_ZONE_KEYWORDS[zone.id] ?? [];
-      staticKws.forEach((kw) => {
-        if (lower.includes(kw)) score += 2;
-      });
-
-      // Check keywords derived from user-created zone name + description
-      const dynamicKws = deriveKeywords(zone.name, zone.description);
-      dynamicKws.forEach((kw) => {
-        if (lower.includes(kw)) score += 1;
-      });
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestZoneId = zone.id;
-      }
-    });
-
-    setSuggestedZoneId(bestScore > 0 ? bestZoneId : null);
   };
 
   const handleApplySmartBatch = () => {
-    if (!smartTaskTitle.trim() || !suggestedZoneId) return;
-    addTask(smartTaskTitle.trim(), 'Auto-batched via Smart Suggestion', suggestedZoneId);
+    if (!smartInput.trim() || !suggestedZoneId) return;
+    addTask(smartInput.trim(), 'Auto-batched via Smart Suggestion', suggestedZoneId);
     setSmartInput('');
     setSuggestedZoneId(null);
-    setSmartTaskTitle('');
   };
 
   const suggestedZone = zones.find((z) => z.id === suggestedZoneId);
@@ -224,11 +180,18 @@ export const ZoneBoard: React.FC = () => {
             </button>
           ) : (
             <button
-              onClick={() => { if (smartInput.trim()) handleSmartInputChange(smartInput); }}
+              onClick={() => {
+                if (!smartInput.trim()) return;
+                const firstZone = zones[0];
+                if (firstZone) {
+                  addTask(smartInput.trim(), 'Manual batch', firstZone.id);
+                  setSmartInput('');
+                }
+              }}
               className="border border-border bg-muted/70 text-foreground text-xs font-medium px-4 py-2.5 rounded-full transition-all duration-300 flex items-center gap-1 hover:bg-muted hover:text-primary hover:scale-105 active:scale-95 whitespace-nowrap"
             >
               <Stack className="w-4 h-4" />
-              <span>Suggest Tasks</span>
+              <span>Add to {zones[0]?.name ?? 'Board'}</span>
             </button>
           )}
         </div>
@@ -243,9 +206,8 @@ export const ZoneBoard: React.FC = () => {
             addTask(smartInput.trim(), 'AI-suggested task', zoneId);
             setSmartInput('');
             setSuggestedZoneId(null);
-            setSmartTaskTitle('');
           }}
-          onDismiss={() => {}}
+          onDismiss={() => setSmartInput('')}
         />
       )}
 

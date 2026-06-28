@@ -1,8 +1,26 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { BackendBootstrap, AnalyticsSummary } from '../services/api';
+import type { BackendBootstrap, AnalyticsSummary, Recommendation } from '../services/api';
 import { api, setApiToken } from '../services/api';
 import type { ContextZone, SwitchEvent, Task, ToastNotice, User, UserBadge } from '../types';
+
+const nowIso = () => new Date().toISOString();
+const nextId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+const DEFAULT_ZONES: ContextZone[] = [
+  { id: 'z-deep-code', name: 'Deep Code', description: 'Development, architecture, debugging', color: '#6366f1', icon: 'Code', createdAt: nowIso(), userId: '' },
+  { id: 'z-comms', name: 'Comms & Sync', description: 'Email, Slack, meetings, reviews', color: '#22c55e', icon: 'ChatsCircle', createdAt: nowIso(), userId: '' },
+  { id: 'z-admin', name: 'Admin & Planning', description: 'Tickets, docs, planning, tracking', color: '#f59e0b', icon: 'ClipboardText', createdAt: nowIso(), userId: '' },
+];
+
+const DEFAULT_TASKS: Task[] = [
+  { id: nextId('t'), title: 'Set up your first zone', description: 'Configure your work areas', completed: false, zoneId: 'z-admin', userId: '', createdAt: nowIso() },
+  { id: nextId('t'), title: 'Add a task to Deep Code', description: '', completed: false, zoneId: 'z-deep-code', userId: '', createdAt: nowIso() },
+  { id: nextId('t'), title: 'Review team messages', description: '', completed: false, zoneId: 'z-comms', userId: '', createdAt: nowIso() },
+  { id: nextId('t'), title: 'Plan weekly priorities', description: '', completed: false, zoneId: 'z-admin', userId: '', createdAt: nowIso() },
+  { id: nextId('t'), title: 'Write unit tests', description: '', completed: false, zoneId: 'z-deep-code', userId: '', createdAt: nowIso() },
+  { id: nextId('t'), title: 'Sync with design team', description: '', completed: false, zoneId: 'z-comms', userId: '', createdAt: nowIso() },
+];
 
 interface FlowrState {
   currentUser: User | null;
@@ -22,6 +40,7 @@ interface FlowrState {
   completeTask: (id: string) => void;
   toggleTask: (id: string) => void;
   toggleComplete: (id: string) => void;
+  updateTask: (id: string, updates: Partial<Pick<Task, 'title' | 'description'>>) => void;
   deleteTask: (id: string) => void;
   moveTask: (taskId: string, targetZoneId: string) => void;
   reorderTasks: (zoneId: string, startIndex: number, endIndex: number) => void;
@@ -96,107 +115,16 @@ interface FlowrState {
   hasHydratedFromBackend: boolean;
   hydrateFromBackend: (payload: BackendBootstrap) => void;
 
+  lastBufferReadiness: number;
+  setBufferReadiness: (rating: number) => void;
+
   analytics: AnalyticsSummary | null;
   analyticsLoading: boolean;
   fetchAnalytics: () => Promise<void>;
+
+  recommendations: Recommendation[];
+  recommendationsLoading: boolean;
 }
-
-const nowIso = () => new Date().toISOString();
-const nextId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-
-const defaultZones = (userId: string): ContextZone[] => [
-  {
-    id: 'z-deep-code',
-    name: 'Deep Code',
-    description: 'Coding, refactoring, building architecture. Focus block.',
-    color: 'emerald',
-    icon: 'Code',
-    createdAt: nowIso(),
-    userId,
-  },
-  {
-    id: 'z-comms',
-    name: 'Comms & Sync',
-    description: 'Slack, emails, pull request reviews, team chats.',
-    color: 'blue',
-    icon: 'MessageSquare',
-    createdAt: nowIso(),
-    userId,
-  },
-  {
-    id: 'z-admin',
-    name: 'Admin & Planning',
-    description: 'Jira tickets, scheduling, timesheets, documentation.',
-    color: 'purple',
-    icon: 'Settings',
-    createdAt: nowIso(),
-    userId,
-  },
-];
-
-const defaultTasks = (userId: string): Task[] => [
-  {
-    id: 't1',
-    title: 'Implement Flow Guardian Fullscreen Interface',
-    description: 'Build a distraction-free immersive layout for active zones.',
-    completed: false,
-    zoneId: 'z-deep-code',
-    userId,
-    createdAt: nowIso(),
-  },
-  {
-    id: 't2',
-    title: 'Establish SQLite database schema',
-    description: 'Design robust SQLite database tables for users, tasks, and switches.',
-    completed: false,
-    zoneId: 'z-deep-code',
-    userId,
-    createdAt: nowIso(),
-  },
-  {
-    id: 't3',
-    title: 'Write core custom transition animations',
-    description: 'Add circular breath animations and sliding effects.',
-    completed: true,
-    zoneId: 'z-deep-code',
-    userId,
-    createdAt: nowIso(),
-  },
-  {
-    id: 't4',
-    title: 'Review PR for frontend analytics charts',
-    description: 'Check team submissions for whiplash streak stats.',
-    completed: false,
-    zoneId: 'z-comms',
-    userId,
-    createdAt: nowIso(),
-  },
-  {
-    id: 't5',
-    title: 'Respond to Design Review email thread',
-    description: 'Provide feedback on typography and layout decisions.',
-    completed: false,
-    zoneId: 'z-comms',
-    userId,
-    createdAt: nowIso(),
-  },
-  {
-    id: 't6',
-    title: 'Log sprint planning notes',
-    description: 'Update the backlog in Asana/Jira with next week tasks.',
-    completed: false,
-    zoneId: 'z-admin',
-    userId,
-    createdAt: nowIso(),
-  },
-];
-
-const defaultUser: User = {
-  id: 'guest-user',
-  email: 'flowr-focus@deepmind.com',
-  name: 'Focus Builder',
-  createdAt: nowIso(),
-};
 
 function revertWithToast(
   setToast: (message: string, kind?: ToastNotice['kind']) => string,
@@ -210,21 +138,21 @@ function revertWithToast(
 export const useFlowrStore = create<FlowrState>()(
   persist(
     (set, get) => ({
-      currentUser: defaultUser,
-      token: 'guest-token',
+      currentUser: null,
+      token: null,
       setAuth: (user, token) => {
         set({ currentUser: user, token });
         setApiToken(token);
       },
       logout: () => {
-        set({ currentUser: null, token: null, activeZoneId: null, isGuardianActive: false });
-        setApiToken('guest-token');
+        set({ currentUser: null, token: null, activeZoneId: null, isGuardianActive: false, zones: DEFAULT_ZONES, tasks: DEFAULT_TASKS });
+        setApiToken(null);
       },
 
-      zones: defaultZones('guest-user'),
+      zones: DEFAULT_ZONES,
       setZones: (zones) => set({ zones }),
       addZone: (name, description, color, icon) => {
-        const userId = get().currentUser?.id || 'guest-user';
+        const userId = get().currentUser?.id || '';
         const zone: ContextZone = {
           id: nextId('z'),
           name,
@@ -280,10 +208,10 @@ export const useFlowrStore = create<FlowrState>()(
         });
       },
 
-      tasks: defaultTasks('guest-user'),
+      tasks: DEFAULT_TASKS,
       setTasks: (tasks) => set({ tasks }),
       addTask: (title, description, zoneId) => {
-        const userId = get().currentUser?.id || 'guest-user';
+        const userId = get().currentUser?.id || '';
         const task: Task = {
           id: nextId('t'),
           title,
@@ -323,6 +251,19 @@ export const useFlowrStore = create<FlowrState>()(
       },
       toggleTask: (id) => get().completeTask(id),
       toggleComplete: (id) => get().completeTask(id),
+      updateTask: (id, updates) => {
+        const snapshot = get().tasks;
+        const nextTasks = snapshot.map((task) =>
+          task.id === id ? { ...task, ...updates, updatedAt: nowIso() } : task
+        );
+        set({ tasks: nextTasks });
+
+        void api.updateTask(id, updates).catch((error) => {
+          set({ tasks: snapshot });
+          revertWithToast(get().pushToast, 'Failed to update task', error);
+        });
+      },
+
       deleteTask: (id) => {
         const snapshot = get().tasks;
         set((state) => ({ tasks: state.tasks.filter((task) => task.id !== id) }));
@@ -436,6 +377,14 @@ export const useFlowrStore = create<FlowrState>()(
           );
           elapsedMinutes = Math.floor(totalSeconds / 60);
           void api.endSession(sessionId, totalSeconds, state.sessionCompleted).catch(() => {});
+        }
+
+        if (elapsedMinutes >= 60) {
+          get().unlockBadge(
+            'Guardian General',
+            'Protect focus for 60 consecutive minutes in Flow Guardian.',
+            '\u{1F6E1}\u{FE0F}',
+          );
         }
 
         const breakMinutes = Math.min(12, Math.max(3, Math.floor(elapsedMinutes * 0.15)));
@@ -637,7 +586,6 @@ export const useFlowrStore = create<FlowrState>()(
         const zones = get().zones;
         const learned = get().learnedKeywordMap;
 
-        // Check learned corrections first (strongest signal)
         for (const [keyword, zoneId] of Object.entries(learned)) {
           if (lower.includes(keyword)) {
             const zone = zones.find((z) => z.id === zoneId || z.name.toLowerCase().includes(zoneId.toLowerCase()));
@@ -645,7 +593,6 @@ export const useFlowrStore = create<FlowrState>()(
           }
         }
 
-        // Fallback to static keyword map
         const DEFAULT_ZONE_KEYWORDS: Record<string, string[]> = {
           'z-comms': ['email', 'slack', 'chat', 'call', 'sync', 'zoom', 'review', 'message', 'dm', 'ping', 'notify', 'meet', 'standup'],
           'z-deep-code': ['code', 'bug', 'feature', 'refactor', 'compile', 'database', 'sql', 'api', 'build', 'deploy', 'fix', 'implement', 'debug', 'test', 'spec', 'lint'],
@@ -689,7 +636,7 @@ export const useFlowrStore = create<FlowrState>()(
       clearZoneSwitchHistory: () => set({ zoneSwitchHistory: [] }),
       setWhiplashAlertShown: (shown) => set({ whiplashAlertShown: shown }),
       addSwitch: (fromZoneId, toZoneId) => {
-        const userId = get().currentUser?.id || 'guest-user';
+        const userId = get().currentUser?.id || '';
         const switchEvent: SwitchEvent = {
           id: nextId('sw'),
           userId,
@@ -711,13 +658,13 @@ export const useFlowrStore = create<FlowrState>()(
           get().unlockBadge(
             'Whiplash Witness',
             'Tracked your first cognitive context switch. Awareness is step one.',
-            '👁️',
+            '\u{1F441}\u{FE0F}',
           );
         } else if (totalSwitches === 5) {
           get().unlockBadge(
             'Context Juggler',
             'Logged 5 context switches today. Cognitive friction is rising!',
-            '🤹',
+            '\u{1F939}',
           );
         }
 
@@ -789,24 +736,31 @@ export const useFlowrStore = create<FlowrState>()(
         void get().fetchAvgFocusDuration();
       },
 
+      lastBufferReadiness: 0,
+      setBufferReadiness: (rating) => set({ lastBufferReadiness: rating }),
+
       analytics: null,
       analyticsLoading: false,
       fetchAnalytics: async () => {
-        set({ analyticsLoading: true });
+        set({ analyticsLoading: true, recommendationsLoading: true });
         try {
-          const summary = await api.getAnalyticsSummary();
-          set({ analytics: summary, analyticsLoading: false });
+          const [summary, recommendations] = await Promise.all([
+            api.getAnalyticsSummary(),
+            api.getRecommendations(),
+          ]);
+          set({ analytics: summary, recommendations, analyticsLoading: false, recommendationsLoading: false });
         } catch {
-          set({ analyticsLoading: false });
+          set({ analyticsLoading: false, recommendationsLoading: false });
         }
       },
+
+      recommendations: [],
+      recommendationsLoading: false,
     }),
     {
       name: 'flowr-app-state',
       skipHydration: true,
       partialize: (state) => ({
-        currentUser: state.currentUser,
-        token: state.token,
         zones: state.zones,
         tasks: state.tasks,
         switches: state.switches,
@@ -819,6 +773,8 @@ export const useFlowrStore = create<FlowrState>()(
         consecutiveFullCompletions: state.consecutiveFullCompletions,
         sessionCompleted: state.sessionCompleted,
         lastFocusDurationMinutes: state.lastFocusDurationMinutes,
+        lastBufferReadiness: state.lastBufferReadiness,
+        recommendations: state.recommendations,
       }),
     },
   ),

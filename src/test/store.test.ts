@@ -6,11 +6,10 @@ beforeEach(() => {
 });
 
 describe("store / auth", () => {
-  it("starts with a guest user and guest token", () => {
+  it("starts with no user and no token", () => {
     const state = useFlowrStore.getState();
-    expect(state.currentUser).not.toBeNull();
-    expect(state.currentUser?.id).toBe("guest-user");
-    expect(state.token).toBe("guest-token");
+    expect(state.currentUser).toBeNull();
+    expect(state.token).toBeNull();
   });
 
   it("setAuth updates user and token", () => {
@@ -121,12 +120,12 @@ describe("store / tasks", () => {
     const deepCodeTasks = useFlowrStore
       .getState()
       .tasks.filter((t) => t.zoneId === "z-deep-code");
-    expect(deepCodeTasks).toHaveLength(3);
-    useFlowrStore.getState().reorderTasks("z-deep-code", 0, 2);
+    expect(deepCodeTasks).toHaveLength(2);
+    useFlowrStore.getState().reorderTasks("z-deep-code", 0, 1);
     const reordered = useFlowrStore
       .getState()
       .tasks.filter((t) => t.zoneId === "z-deep-code");
-    expect(reordered).toHaveLength(3);
+    expect(reordered).toHaveLength(2);
     expect(reordered[0].id).toBe(deepCodeTasks[1].id);
   });
 });

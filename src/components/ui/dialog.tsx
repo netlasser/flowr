@@ -17,7 +17,7 @@ export function DialogContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 p-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-muted/50 transition-colors">
+        <DialogPrimitive.Close aria-label="Close" className="absolute right-4 top-4 p-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-muted/50 transition-colors">
           <X size={16} />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>

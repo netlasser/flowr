@@ -23,6 +23,7 @@ export const TransitionBuffer: React.FC = () => {
   const extendBuffer = useFlowrStore((s) => s.extendBuffer);
   const skipBuffer = useFlowrStore((s) => s.skipBuffer);
   const bufferIsQuickBreak = useFlowrStore((s) => s.bufferIsQuickBreak);
+  const setBufferReadiness = useFlowrStore((s) => s.setBufferReadiness);
   const storeSet = useFlowrStore.setState;
 
   const [activePromptIndex, setActivePromptIndex] = useState(0);
@@ -83,18 +84,32 @@ export const TransitionBuffer: React.FC = () => {
   };
 
   const handleDismiss = () => {
+    if (phase === 'rating' && readinessRating > 0) {
+      setBufferReadiness(readinessRating);
+    }
+    const wasBypassed = useFlowrStore.getState().bufferBypassed;
+    if (!wasBypassed && phase === 'rating') {
+      const st = useFlowrStore.getState();
+      st.unlockBadge(
+        'Restoration Champion',
+        'Cleanly complete a full 5-minute recovery break without skipping.',
+        '🧘',
+      );
+    }
     storeSet({
       isBufferActive: false,
       bufferSecondsLeft: 0,
       bufferFromZoneId: null,
       bufferToZoneId: null,
       bufferIsQuickBreak: false,
+      bufferBypassed: false,
     });
   };
 
   const handleMicroBreak = () => {
+    const currentRemaining = useFlowrStore.getState().bufferSecondsLeft;
     extendBuffer(120);
-    setInitialSeconds(120);
+    setInitialSeconds(currentRemaining + 120);
     setMicroBreakOffered(true);
     setPhase('counting');
   };
@@ -271,7 +286,7 @@ export const TransitionBuffer: React.FC = () => {
                 </p>
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Bypassing adds a **6-minute whiplash cost penalty** to your daily stats as cognitive overload rises.
+                Bypassing increases cognitive friction — your working memory flushes less effectively without a proper reset.
               </p>
               <div className="flex items-center justify-end gap-3 mt-6 text-xs font-bold">
                 <button

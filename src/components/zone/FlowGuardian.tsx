@@ -158,7 +158,7 @@ export const FlowGuardian: React.FC = () => {
           {/* Adaptive recommendation */}
           {avgFocusDuration > 0 && (
             <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-2.5 text-xs text-muted-foreground">
-              Your average focus session: <span className="text-foreground font-semibold">{Math.round(avgFocusDuration / 60)} min</span>
+              Your average focus session: <span className="text-foreground font-semibold">{Math.round(avgFocusDuration)} min</span>
             </div>
           )}
 
@@ -218,6 +218,12 @@ export const FlowGuardian: React.FC = () => {
                 focusPhase: null,
                 isGuardianActive: false,
                 activeZoneId: null,
+                focusStartTime: null,
+                isTimerRunning: false,
+                switchesAvoided: 0,
+                focusDurationMinutes: 0,
+                activeSessionId: null,
+                sessionCompleted: false,
               });
             }}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
@@ -416,7 +422,7 @@ export const FlowGuardian: React.FC = () => {
 
               <AlertDialogCancel
                 onClick={() => {
-                  useFlowrStore.setState({ focusPhase: 'celebration', isTimerRunning: false });
+                  useFlowrStore.setState({ focusPhase: 'celebration', isTimerRunning: false, sessionCompleted: false });
                 }}
                 className="w-full py-2.5 px-4 rounded-xl text-muted-foreground text-xs font-medium hover:text-foreground transition-colors active:scale-[0.99]"
               >

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { DotsSixVertical, CheckCircle, PencilSimple, Trash } from '@phosphor-icons/react';
+import { DotsSixVertical, CheckCircle, PencilSimple, Trash, Check, X } from '@phosphor-icons/react';
 import { useFlowrStore } from '../../store/index';
 import type { Task } from '../../types';
 import {
@@ -16,8 +16,32 @@ import {
 
 export function TaskItem({ task }: { task: Task }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const editInputRef = useRef<HTMLInputElement>(null);
   const toggleComplete = useFlowrStore((state) => state.toggleComplete);
+  const updateTask = useFlowrStore((state) => state.updateTask);
   const deleteTask = useFlowrStore((state) => state.deleteTask);
+
+  useEffect(() => {
+    if (isEditing) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleSaveEdit = () => {
+    const trimmed = editTitle.trim();
+    if (trimmed && trimmed !== task.title) {
+      updateTask(task.id, { title: trimmed });
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditTitle(task.title);
+    setIsEditing(false);
+  };
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
@@ -48,13 +72,39 @@ export function TaskItem({ task }: { task: Task }) {
             className={`w-4 h-4 ${task.completed ? 'text-primary' : 'text-muted-foreground'}`}
           />
         </div>
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
-          <p className={`text-sm ${task.completed ? 'line-through text-muted-foreground/70' : 'text-foreground'}`}>{task.title}</p>
-          {showDetails && task.description && (
-            <div className="mt-2 text-xs text-muted-foreground border-t border-border pt-2">{task.description}</div>
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <input
+                ref={editInputRef}
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEdit();
+                  if (e.key === 'Escape') handleCancelEdit();
+                }}
+                className="flex-1 bg-muted/80 border border-border rounded-md px-2 py-1 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button onClick={(e) => { e.stopPropagation(); handleSaveEdit(); }} className="p-1 rounded text-primary hover:bg-primary/10 transition-colors" aria-label="Save">
+                <Check size={14} weight="bold" />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }} className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors" aria-label="Cancel">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
+              <p className={`text-sm ${task.completed ? 'line-through text-muted-foreground/70' : 'text-foreground'}`}>{task.title}</p>
+              {showDetails && task.description && (
+                <div className="mt-2 text-xs text-muted-foreground border-t border-border pt-2">{task.description}</div>
+              )}
+            </div>
           )}
         </div>
         <button
+          onClick={(e) => { e.stopPropagation(); setEditTitle(task.title); setIsEditing(true); }}
           className="flex-shrink-0 p-1 rounded-md text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground transition-all"
           aria-label="Edit task"
         >

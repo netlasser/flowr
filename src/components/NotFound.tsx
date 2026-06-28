@@ -12,7 +12,7 @@ export function NotFound() {
         This page doesn't exist in your cognitive context zones.
       </p>
       <Link
-        to="/"
+        to="/app"
         className="bg-primary text-primary-foreground rounded-full px-6 py-2.5 text-sm font-medium hover:bg-primary/90 hover:scale-105 transition-all shadow-lg active:scale-[0.98]"
       >
         Return Home

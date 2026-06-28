@@ -14,6 +14,7 @@ import badgesRouter from './routes/badges.js';
 import sessionsRouter from './routes/sessions.js';
 import analyticsRouter from './routes/analytics.js';
 import aiRouter from './routes/ai.js';
+import betaRouter from './routes/beta.js';
 
 // DB health check at startup
 import { checkDbAvailability } from './db-guard.js';
@@ -45,6 +46,7 @@ app.use('/api/badges', badgesRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/beta', betaRouter);
 
 // Simple Health Status Check
 app.get('/api/health', (req, res) => {

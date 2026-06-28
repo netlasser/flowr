@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldWarning, Compass, TrendUp, Cpu, Trophy, SignOut, ArrowClockwise } from '@phosphor-icons/react';
+import { ShieldWarning, Compass, TrendUp, Cpu, Trophy, SignOut } from '@phosphor-icons/react';
 import { useFlowrStore } from '../store';
 import { ZoneBoard } from './zone/ZoneBoard';
 import { FlowGuardian } from './zone/FlowGuardian';
 import { TransitionBuffer } from './zone/TransitionBuffer';
 import { WhiplashAnalytics } from './dashboard/WhiplashAnalytics';
-import { api, setApiToken } from '../services/api';
+import { api, getApiToken } from '../services/api';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { FeedbackForm } from './beta/FeedbackForm';
 
 export function AppShell() {
   const navigate = useNavigate();
@@ -16,14 +17,10 @@ export function AppShell() {
   const isBufferActive = useFlowrStore((state) => state.isBufferActive);
   const switches = useFlowrStore((state) => state.switches);
   const toasts = useFlowrStore((state) => state.toasts);
+  const currentUser = useFlowrStore((state) => state.currentUser);
   const logout = useFlowrStore((state) => state.logout);
   const hydrateFromBackend = useFlowrStore((state) => state.hydrateFromBackend);
-  const hasHydratedFromBackend = useFlowrStore((state) => state.hasHydratedFromBackend);
   const pushToast = useFlowrStore((state) => state.pushToast);
-
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
-
   const totalSwitches = switches.length;
   const timeLostMinutes = totalSwitches * 15;
   const isWarning = totalSwitches >= 3;
@@ -32,14 +29,25 @@ export function AppShell() {
     let cancelled = false;
 
     const bootstrap = async () => {
-      setLoadError(null);
       try {
-        console.log('[AppShell] Bootstrapping session...');
-        const guest = await api.guestSession();
-        if (cancelled) return;
+        const token = getApiToken();
+        if (!token) {
+          if (!cancelled) {
+            const user = useFlowrStore.getState().currentUser;
+            if (user) {
+              const [zones, tasks, switchesToday, badges] = await Promise.all([
+                api.getZones().catch(() => []),
+                api.getTasks().catch(() => []),
+                api.getSwitchesToday().catch(() => []),
+                api.getBadgesUser().catch(() => []),
+              ]);
+              if (cancelled) return;
+              hydrateFromBackend({ user, token: '', zones, tasks, switches: switchesToday, badges });
+            }
+          }
+          return;
+        }
 
-        console.log('[AppShell] Guest session OK:', guest.user?.name);
-        setApiToken(guest.token);
         const [zones, tasks, switchesToday, badges] = await Promise.all([
           api.getZones(),
           api.getTasks(),
@@ -48,36 +56,14 @@ export function AppShell() {
         ]);
 
         if (cancelled) return;
-        hydrateFromBackend({
-          user: guest.user,
-          token: guest.token,
-          zones,
-          tasks,
-          switches: switchesToday,
-          badges,
-        });
-        console.log('[AppShell] Hydration complete');
+        const user = useFlowrStore.getState().currentUser;
+        if (user) {
+          hydrateFromBackend({ user, token, zones, tasks, switches: switchesToday, badges });
+        }
       } catch (error) {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : 'Failed to initialize FLOWR';
-          console.error('[AppShell] Bootstrap failed:', error);
-          setLoadError(message);
-
-          const state = useFlowrStore.getState();
-          hydrateFromBackend({
-            user: state.currentUser ?? {
-              id: 'guest-user',
-              email: 'flowr-focus@deepmind.com',
-              name: 'Focus Builder',
-              createdAt: new Date().toISOString(),
-            },
-            token: state.token ?? 'guest-token',
-            zones: state.zones,
-            tasks: state.tasks,
-            switches: state.switches,
-            badges: state.badges,
-          });
-          console.log('[AppShell] Hydrated with fallback data due to:', message);
+          pushToast(message, 'error');
         }
       }
     };
@@ -87,47 +73,12 @@ export function AppShell() {
     return () => {
       cancelled = true;
     };
-  }, [hydrateFromBackend, pushToast, retryKey]);
+  }, [hydrateFromBackend, pushToast]);
 
-  if (!hasHydratedFromBackend) {
-    if (loadError) {
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-          <div className="flex flex-col items-center gap-4 max-w-sm text-center px-4">
-            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-rose-400">
-              <ShieldWarning size={28} />
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">FLOWR</p>
-              <h1 className="m-0 text-lg font-black tracking-tight mt-1">Connection failed</h1>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{loadError}</p>
-            </div>
-            <button
-              onClick={() => setRetryKey((k) => k + 1)}
-              className="mt-2 flex items-center gap-2 bg-accent text-accent-foreground rounded-full px-6 py-2.5 text-sm font-bold hover:bg-accent/90 hover:scale-105 transition-all shadow-lg active:scale-[0.98]"
-            >
-              <ArrowClockwise size={14} />
-              <span>Retry</span>
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <div className="flex flex-col items-center gap-4">
-          <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-primary">
-            <Cpu size={28} className="animate-pulse" />
-          </div>
-          <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">FLOWR</p>
-            <h1 className="m-0 text-xl font-black tracking-tight">Loading backend session</h1>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleExit = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background font-body text-foreground">
@@ -146,12 +97,12 @@ export function AppShell() {
               <span>FLOWR</span>
             </h2>
             <p className="mt-1 text-[10px] font-medium tracking-wide text-muted-foreground">
-              Cognitive context shield
+              {currentUser?.email ?? 'Cognitive context shield'}
             </p>
           </div>
         </div>
 
-        <Tabs value={document.location.pathname.startsWith('/app/analytics') ? 'analytics' : 'board'} onValueChange={(v) => navigate(v === 'analytics' ? '/app/analytics' : '/app')}>
+        <Tabs value={document.location.pathname.startsWith('/app/analytics') ? 'analytics' : 'board'} onValueChange={(v) => navigate(v === 'analytics' ? '/app/analytics' : '/app')} activationMode="manual">
           <TabsList>
             <TabsTrigger value="board" id="tab-board">
               <Compass size={14} />
@@ -185,7 +136,7 @@ export function AppShell() {
           </div>
 
           <button
-            onClick={() => { logout(); navigate('/'); }}
+            onClick={handleExit}
             className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors active:scale-95"
             title="End session"
           >
@@ -200,7 +151,7 @@ export function AppShell() {
       </main>
 
       <footer className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 border-t border-border bg-background/60 px-6 py-4 md:flex-row">
-        <p className="text-[10px] text-muted-foreground">FLOWR © 2026 — Context-first productivity.</p>
+        <p className="text-[10px] text-muted-foreground">FLOWR &copy; 2026 &mdash; Context-first productivity.</p>
         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
           <Trophy size={12} className="text-foreground/50" />
           <span>Knowledge workers lose focus for up to 15 min after every context switch.</span>
@@ -243,6 +194,8 @@ export function AppShell() {
           </div>
         ))}
       </div>
+
+      <FeedbackForm />
     </div>
   );
 }
