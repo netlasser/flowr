@@ -29,8 +29,6 @@ const defaultFlags: FeatureFlag[] = [
 ];
 
 export function getFeatureFlags(): FeatureFlag[] {
-  const isBeta = import.meta.env.VITE_APP_ENV === 'beta';
-  
   return defaultFlags.map((flag) => {
     // If flag has environment restriction, only enable in that environment
     if (flag.environment && flag.environment !== import.meta.env.VITE_APP_ENV) {

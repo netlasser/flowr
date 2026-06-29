@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Send, Bug, Lightbulb, MessageCircle } from '@phosphor-icons/react';
+import { X, PaperPlaneRight, Bug, Lightbulb, ChatCircleDots } from '@phosphor-icons/react';
 import { useFlowrStore } from '../../store';
 import { isFeatureEnabled } from '../../lib/featureFlags';
 import { api } from '../../services/api';
@@ -64,7 +64,7 @@ export function FeedbackForm() {
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-105 active:scale-95"
         title="Submit Beta Feedback"
       >
-        <MessageCircle size={24} />
+        <ChatCircleDots size={24} />
       </button>
 
       {/* Feedback modal */}
@@ -117,7 +117,7 @@ export function FeedbackForm() {
                       : 'border-border text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  <MessageCircle size={16} />
+                  <ChatCircleDots size={16} />
                   <span>General</span>
                 </button>
               </div>
@@ -142,7 +142,7 @@ export function FeedbackForm() {
                 disabled={isSubmitting || !message.trim()}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
-                <Send size={18} />
+                <PaperPlaneRight size={18} />
                 <span>{isSubmitting ? 'Submitting...' : 'Submit Feedback'}</span>
               </button>
             </form>
