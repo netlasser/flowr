@@ -53,14 +53,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// Serve frontend build static files in production
-const frontendDistPath = path.resolve(__dirname, '../dist');
-app.use(express.static(frontendDistPath));
+// Serve frontend build static files in production (skip on Vercel serverless)
+if (!process.env.VERCEL) {
+  const frontendDistPath = path.resolve(__dirname, '../dist');
+  app.use(express.static(frontendDistPath));
 
-// Fallback index.html router for SPA React-Router (Express 5 compatible)
-app.get('/{*path}', (req, res) => {
-  res.sendFile(path.resolve(frontendDistPath, 'index.html'));
-});
+  // Fallback index.html router for SPA React-Router (Express 5 compatible)
+  app.get('/{*path}', (req, res) => {
+    res.sendFile(path.resolve(frontendDistPath, 'index.html'));
+  });
+}
 
 // Sentry error handler (must come before the generic handler)
 Sentry.setupExpressErrorHandler(app);
@@ -76,8 +78,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Run DB health check after server starts
-if (!process.env.VITEST) {
+// Run DB health check after server starts (skip on Vercel serverless)
+if (!process.env.VITEST && !process.env.VERCEL) {
   app.listen(PORT, async () => {
     console.log(`===============================================`);
     console.log(`    FLOWR Backend running at: http://localhost:${PORT}`);
