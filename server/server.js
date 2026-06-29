@@ -24,7 +24,7 @@ const __dirname = path.dirname(__filename);
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  environment: process.env.NODE_ENV || 'development',
+  environment: process.env.VITE_APP_ENV || process.env.NODE_ENV || 'development',
   tracesSampleRate: 1.0,
 });
 

@@ -7,10 +7,19 @@ const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'flowr-dev-secret-change-in-production';
 
+const APP_ENV = process.env.VITE_APP_ENV || process.env.NODE_ENV || 'development';
+
 router.post('/guest', async (req, res) => {
   const { name, email } = req.body;
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required' });
+  }
+
+  if (APP_ENV === 'beta') {
+    const whitelist = (process.env.BETA_EMAIL_WHITELIST || '').split(',').map(e => e.trim().toLowerCase());
+    if (whitelist.length > 0 && !whitelist.includes(email.trim().toLowerCase())) {
+      return res.status(403).json({ error: 'Access restricted to beta testers only' });
+    }
   }
 
   try {
